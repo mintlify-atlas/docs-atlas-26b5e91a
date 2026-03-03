@@ -1,0 +1,147 @@
+---
+title: 'Register Employee'
+api: 'POST /intern/signup'
+description: 'Register a new employee in the system'
+---
+
+## Authentication
+
+This endpoint requires authentication with the **Administrador** role. The access token must be provided in cookies.
+
+## Request Body
+
+<ParamField body="name" type="string" required>
+  Employee's full name. Must be at least 3 characters long.
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Employee's email address. Must be a valid email format.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Employee's password. Must be at least 6 characters long. Will be securely hashed before storage.
+</ParamField>
+
+<ParamField body="rol" type="string" required>
+  Employee's role in the system.
+  
+  **Allowed values:**
+  - `Administrador` - Full administrative access
+  - `Asistente de Gerencia` - Management assistant access
+</ParamField>
+
+## Response
+
+<ResponseField name="mensaje" type="string">
+  Success message confirming the registration
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X POST https://api.demet.com/intern/signup \
+  -H "Content-Type: application/json" \
+  -b "access_token=your_access_token" \
+  -d '{
+    "name": "Juan Pérez",
+    "email": "juan@example.com",
+    "password": "123456",
+    "rol": "Administrador"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.demet.com/intern/signup', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include', // Include cookies
+  body: JSON.stringify({
+    name: 'Juan Pérez',
+    email: 'juan@example.com',
+    password: '123456',
+    rol: 'Administrador'
+  })
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+```python Python
+import requests
+
+url = 'https://api.demet.com/intern/signup'
+headers = {'Content-Type': 'application/json'}
+cookies = {'access_token': 'your_access_token'}
+
+payload = {
+    'name': 'Juan Pérez',
+    'email': 'juan@example.com',
+    'password': '123456',
+    'rol': 'Administrador'
+}
+
+response = requests.post(url, json=payload, headers=headers, cookies=cookies)
+print(response.json())
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 201 Success
+{
+  "mensaje": "Registro Exitoso"
+}
+```
+
+```json 400 Email Already In Use
+{
+  "error": "Email en Uso"
+}
+```
+
+```json 400 Validation Error
+{
+  "message": "El nombre debe tener mínimo 3 caracteres"
+}
+```
+
+```json 401 Unauthorized
+{
+  "auth": false,
+  "message": "Usuario/Rol No Autorizado"
+}
+```
+
+</ResponseExample>
+
+## Validation Rules
+
+The request body is validated against the following schema:
+
+<Expandable title="Validation Schema Details">
+
+| Field | Type | Validation |
+|-------|------|------------|
+| name | string | Minimum 3 characters |
+| email | string | Valid email format |
+| password | string | Minimum 6 characters |
+| rol | enum | Must be "Administrador" or "Asistente de Gerencia" |
+
+**Error Messages:**
+- Name: "El nombre debe tener mínimo 3 caracteres"
+- Email: "Email inválido"
+- Password: "La contraseña debe tener al menos 6 caracteres"
+- Role: "Rol inválido. Debe ser 'Administrador' o 'Asistente de Gerencia'"
+
+</Expandable>
+
+## Security Notes
+
+- Passwords are automatically hashed using bcrypt before storage
+- Only users with **Administrador** role can register new employees
+- Email addresses must be unique in the system
+- The endpoint validates the access token via the `verifyRol` middleware

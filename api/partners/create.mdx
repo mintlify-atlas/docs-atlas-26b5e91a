@@ -1,0 +1,130 @@
+---
+title: 'Create Partner'
+api: 'POST /partner/register'
+description: 'Register a new partner in the DEMET system'
+---
+
+## Overview
+
+This endpoint allows you to register a new partner in the system. The user must be authenticated with a valid JWT token in the `access_token` cookie.
+
+## Request Body
+
+<ParamField body="id" type="string" required>
+  Unique identifier for the partner
+  
+  Example: `"P001"`
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  Full name of the partner
+  
+  Example: `"Carlos Rodríguez"`
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Email address of the partner (must be a valid email format)
+  
+  Example: `"carlos.rodriguez@example.com"`
+</ParamField>
+
+<ParamField body="phoneNumber" type="string" required>
+  Contact phone number
+  
+  Example: `"3215667890"`
+</ParamField>
+
+<ParamField body="cedula" type="number" required>
+  Identification number (must be a positive number)
+  
+  Example: `1234567890`
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message confirming partner registration
+  
+  Example: `"Socio Registrado Exitosamente"`
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.example.com/partner/register \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN" \
+  -d '{
+    "id": "P001",
+    "name": "Carlos Rodríguez",
+    "email": "carlos.rodriguez@example.com",
+    "phoneNumber": "3215667890",
+    "cedula": 1234567890
+  }'
+```
+
+```javascript JavaScript
+fetch('https://api.example.com/partner/register', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  credentials: 'include', // Include cookies
+  body: JSON.stringify({
+    id: 'P001',
+    name: 'Carlos Rodríguez',
+    email: 'carlos.rodriguez@example.com',
+    phoneNumber: '3215667890',
+    cedula: 1234567890
+  })
+})
+.then(response => response.json())
+.then(data => console.log(data));
+```
+
+```python Python
+import requests
+
+url = "https://api.example.com/partner/register"
+cookies = {"access_token": "YOUR_JWT_TOKEN"}
+data = {
+    "id": "P001",
+    "name": "Carlos Rodríguez",
+    "email": "carlos.rodriguez@example.com",
+    "phoneNumber": "3215667890",
+    "cedula": 1234567890
+}
+
+response = requests.post(url, json=data, cookies=cookies)
+print(response.json())
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 Success
+{
+  "message": "Socio Registrado Exitosamente"
+}
+```
+
+```json 400 Bad Request
+{
+  "message": "Validation error or duplicate data"
+}
+```
+
+```json 401 Unauthorized
+{
+  "message": "Token no enviado o inválido"
+}
+```
+
+```json 500 Internal Server Error
+{
+  "message": "Error interno del servidor"
+}
+```

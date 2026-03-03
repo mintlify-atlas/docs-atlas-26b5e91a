@@ -1,0 +1,368 @@
+---
+title: 'Employee Management'
+description: 'List, update, and delete employee records'
+---
+
+This page documents the employee management endpoints that allow administrators to view, update, and delete employee records.
+
+## List All Employees
+
+<api method="GET" url="/intern/get" />
+
+Retrieve a complete list of all registered employees in the system.
+
+### Authentication
+
+Requires authentication with the **Administrador** role. The access token must be provided in cookies.
+
+### Response
+
+<ResponseField name="result" type="array">
+  Array of employee objects
+  
+  <Expandable title="Employee Object">
+    <ResponseField name="id_employee" type="integer">
+      Unique identifier for the employee
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Employee's full name
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      Employee's email address
+    </ResponseField>
+    
+    <ResponseField name="rol" type="string">
+      Employee's role (Administrador or Asistente de Gerencia)
+    </ResponseField>
+    
+    <ResponseField name="created_at" type="string">
+      ISO 8601 timestamp of when the employee was created
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Request Example
+
+<RequestExample>
+
+```bash cURL
+curl -X GET https://api.demet.com/intern/get \
+  -b "access_token=your_access_token"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.demet.com/intern/get', {
+  method: 'GET',
+  credentials: 'include'
+});
+
+const data = await response.json();
+console.log(data.result);
+```
+
+```python Python
+import requests
+
+url = 'https://api.demet.com/intern/get'
+cookies = {'access_token': 'your_access_token'}
+
+response = requests.get(url, cookies=cookies)
+employees = response.json()['result']
+
+for employee in employees:
+    print(f"{employee['name']} - {employee['email']}")
+```
+
+</RequestExample>
+
+### Response Example
+
+<ResponseExample>
+
+```json 200 Success
+{
+  "result": [
+    {
+      "id_employee": 4,
+      "name": "Paula",
+      "email": "paula@gmail.com",
+      "rol": "Administrador",
+      "created_at": "2025-11-18T06:13:41.005Z"
+    },
+    {
+      "id_employee": 5,
+      "name": "Juan Pérez",
+      "email": "juan@example.com",
+      "rol": "Asistente de Gerencia",
+      "created_at": "2025-11-19T10:22:15.123Z"
+    }
+  ]
+}
+```
+
+```json 401 Unauthorized
+{
+  "message": "No autorizado"
+}
+```
+
+```json 500 Server Error
+{
+  "message": "Error interno del servidor"
+}
+```
+
+</ResponseExample>
+
+---
+
+## Update Employee
+
+<api method="PUT" url="/intern/update" />
+
+Update an existing employee's email and role.
+
+### Authentication
+
+Requires authentication with the **Administrador** role.
+
+### Request Body
+
+<ParamField body="v_idEmployee" type="integer" required>
+  The ID of the employee to update. Must be a positive integer.
+</ParamField>
+
+<ParamField body="v_email" type="string" required>
+  New email address for the employee. Must be a valid email format.
+</ParamField>
+
+<ParamField body="v_rol" type="string" required>
+  New role for the employee.
+  
+  **Allowed values:**
+  - `Administrador`
+  - `Asistente de Gerencia`
+</ParamField>
+
+### Response
+
+<ResponseField name="mensaje" type="string">
+  Success message confirming the update
+</ResponseField>
+
+### Request Example
+
+<RequestExample>
+
+```bash cURL
+curl -X PUT https://api.demet.com/intern/update \
+  -H "Content-Type: application/json" \
+  -b "access_token=your_access_token" \
+  -d '{
+    "v_idEmployee": 5,
+    "v_email": "empleado@gmail.com",
+    "v_rol": "Asistente de Gerencia"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.demet.com/intern/update', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include',
+  body: JSON.stringify({
+    v_idEmployee: 5,
+    v_email: 'empleado@gmail.com',
+    v_rol: 'Asistente de Gerencia'
+  })
+});
+
+const data = await response.json();
+console.log(data.mensaje);
+```
+
+```python Python
+import requests
+
+url = 'https://api.demet.com/intern/update'
+headers = {'Content-Type': 'application/json'}
+cookies = {'access_token': 'your_access_token'}
+
+payload = {
+    'v_idEmployee': 5,
+    'v_email': 'empleado@gmail.com',
+    'v_rol': 'Asistente de Gerencia'
+}
+
+response = requests.put(url, json=payload, headers=headers, cookies=cookies)
+print(response.json())
+```
+
+</RequestExample>
+
+### Response Example
+
+<ResponseExample>
+
+```json 201 Success
+{
+  "mensaje": "Update Exitoso"
+}
+```
+
+```json 400 Validation Error
+{
+  "message": "Email inválido"
+}
+```
+
+```json 401 Unauthorized
+{
+  "auth": false,
+  "message": "Usuario/Rol No Autorizado"
+}
+```
+
+```json 500 Server Error
+{
+  "message": "Error interno del servidor"
+}
+```
+
+</ResponseExample>
+
+### Validation Rules
+
+<Expandable title="Update Schema Validation">
+
+| Field | Type | Validation | Error Message |
+|-------|------|------------|---------------|
+| v_idEmployee | integer | Positive integer | "Numero debe ser Entero Positivo" |
+| v_email | string | Valid email format | "Email inválido" |
+| v_rol | enum | "Administrador" or "Asistente de Gerencia" | "Rol inválido. Debe ser 'Administrador' o 'Asistente de Gerencia'" |
+
+</Expandable>
+
+---
+
+## Delete Employee
+
+<api method="DELETE" url="/intern/delete" />
+
+Permanently delete an employee from the system.
+
+### Authentication
+
+Requires authentication with the **Administrador** role.
+
+### Request Body
+
+<ParamField body="v_idEmployee" type="integer" required>
+  The ID of the employee to delete. Must be a positive integer.
+</ParamField>
+
+### Response
+
+<ResponseField name="mensaje" type="string">
+  Success message confirming the deletion
+</ResponseField>
+
+### Request Example
+
+<RequestExample>
+
+```bash cURL
+curl -X DELETE https://api.demet.com/intern/delete \
+  -H "Content-Type: application/json" \
+  -b "access_token=your_access_token" \
+  -d '{
+    "v_idEmployee": 5
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.demet.com/intern/delete', {
+  method: 'DELETE',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include',
+  body: JSON.stringify({
+    v_idEmployee: 5
+  })
+});
+
+const data = await response.json();
+console.log(data.mensaje);
+```
+
+```python Python
+import requests
+
+url = 'https://api.demet.com/intern/delete'
+headers = {'Content-Type': 'application/json'}
+cookies = {'access_token': 'your_access_token'}
+
+payload = {'v_idEmployee': 5}
+
+response = requests.delete(url, json=payload, headers=headers, cookies=cookies)
+print(response.json())
+```
+
+</RequestExample>
+
+### Response Example
+
+<ResponseExample>
+
+```json 201 Success
+{
+  "mensaje": "Delete Exitoso"
+}
+```
+
+```json 400 Validation Error
+{
+  "message": "Numero debe ser Entero Positivo"
+}
+```
+
+```json 401 Unauthorized
+{
+  "auth": false,
+  "message": "Usuario/Rol No Autorizado"
+}
+```
+
+```json 500 Server Error
+{
+  "message": "Error interno del servidor"
+}
+```
+
+</ResponseExample>
+
+### Validation Rules
+
+<Expandable title="Delete Schema Validation">
+
+| Field | Type | Validation | Error Message |
+|-------|------|------------|---------------|
+| v_idEmployee | integer | Positive integer | "Numero debe ser Entero Positivo" |
+
+</Expandable>
+
+### Important Notes
+
+<Warning>
+  Deleting an employee is permanent and cannot be undone. Ensure you have confirmed the deletion before calling this endpoint.
+</Warning>
+
+- The deletion is permanent and irreversible
+- All data associated with the employee will be removed
+- You cannot delete your own account while logged in
+- Only administrators can delete employee accounts

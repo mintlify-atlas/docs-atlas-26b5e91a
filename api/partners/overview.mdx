@@ -1,0 +1,71 @@
+---
+title: 'Partners API Overview'
+description: 'Manage partners in the DEMET Backend system'
+---
+
+## Introduction
+
+The Partners API allows you to manage partner records in the DEMET system. Partners are key stakeholders who have specific privileges and access within the platform.
+
+## Authentication
+
+All Partner API endpoints require authentication using JWT tokens stored in cookies. The system automatically validates the `access_token` cookie sent with each request.
+
+```json
+"security": [
+  {
+    "cookieAuth": []
+  }
+]
+```
+
+## Available Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Create Partner" icon="plus" href="/api/partners/create">
+    Register a new partner in the system
+  </Card>
+  <Card title="List Partners" icon="list" href="/api/partners/list">
+    Retrieve all registered partners
+  </Card>
+  <Card title="Update Partner" icon="pen" href="/api/partners/update">
+    Update an existing partner's information
+  </Card>
+  <Card title="Delete Partner" icon="trash" href="/api/partners/delete">
+    Remove a partner from the system
+  </Card>
+</CardGroup>
+
+## Partner Object
+
+The partner object contains the following fields:
+
+<ResponseField name="id" type="string" required>
+  Unique identifier for the partner
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Full name of the partner
+</ResponseField>
+
+<ResponseField name="email" type="string" required>
+  Email address of the partner (must be valid email format)
+</ResponseField>
+
+<ResponseField name="phoneNumber" type="string" required>
+  Contact phone number
+</ResponseField>
+
+<ResponseField name="cedula" type="number" required>
+  Identification number (must be a positive number)
+</ResponseField>
+
+## Error Handling
+
+All endpoints return standard HTTP status codes:
+
+- `200` - Success
+- `400` - Bad Request (validation error or duplicate data)
+- `401` - Unauthorized (missing or invalid token)
+- `404` - Not Found (partner does not exist)
+- `500` - Internal Server Error

@@ -1,0 +1,118 @@
+---
+title: 'Delete Request'
+api: 'DELETE /request/delete'
+description: 'Remove a request from the system'
+---
+
+Deletes a request registered by a client or partner. The user must be authenticated via JWT token stored in cookies. Only the numeric request ID is required.
+
+<Warning>
+  This action is permanent and cannot be undone. Ensure you want to delete the request before proceeding.
+</Warning>
+
+## Authentication
+
+<ParamField header="Cookie" type="string" required>
+  JWT authentication token
+  
+  Example: `"token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+</ParamField>
+
+## Request Body
+
+<ParamField body="v_id_request" type="integer" required>
+  Request ID to delete (minimum 1)
+  
+  Example: `15`
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message
+  
+  Example: `"Request Eliminada"`
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X DELETE https://api.example.com/request/delete \
+  -H "Content-Type: application/json" \
+  -H "Cookie: token=your-jwt-token" \
+  -d '{
+    "v_id_request": 15
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.example.com/request/delete', {
+  method: 'DELETE',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include', // Include cookies
+  body: JSON.stringify({
+    v_id_request: 15
+  })
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.delete(
+    'https://api.example.com/request/delete',
+    cookies={'token': 'your-jwt-token'},
+    json={
+        'v_id_request': 15
+    }
+)
+
+data = response.json()
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 Success
+{
+  "message": "Request Eliminada"
+}
+```
+
+```json 400 Validation Error
+{
+  "message": "v_id_request debe ser un número entero positivo"
+}
+```
+
+```json 401 Unauthorized
+{
+  "message": "Token no enviado o inválido"
+}
+```
+
+```json 404 Not Found
+{
+  "message": "No se encontró la solicitud a eliminar"
+}
+```
+
+```json 500 Server Error
+{
+  "message": "Error interno del servidor"
+}
+```
+
+</ResponseExample>
+
+## Use Cases
+
+- Remove duplicate requests
+- Delete test or spam requests
+- Cancel requests that are no longer needed
+- Clean up old or abandoned requests

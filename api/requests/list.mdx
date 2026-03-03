@@ -1,0 +1,195 @@
+---
+title: 'List Requests'
+api: 'GET /request/get'
+description: 'Get all event requests from clients and partners'
+---
+
+Retrieves the complete list of requests submitted by clients or partners. Includes detailed information such as personal data, event dates, current status, calculated approximate value, selected space, and associated rate.
+
+<Note>
+  This endpoint requires authentication via JWT token stored in cookies.
+</Note>
+
+## Authentication
+
+<ParamField header="Cookie" type="string" required>
+  JWT authentication token
+  
+  Example: `"token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+</ParamField>
+
+## Response
+
+<ResponseField name="result" type="array">
+  Array of request objects
+  
+  <Expandable title="Request Object">
+    <ResponseField name="id_request" type="integer">
+      Unique request identifier
+      
+      Example: `2`
+    </ResponseField>
+    
+    <ResponseField name="tittle" type="string">
+      Event title
+      
+      Example: `"CUMPLEAÑOS"`
+    </ResponseField>
+    
+    <ResponseField name="description" type="string">
+      Event description
+      
+      Example: `"QUIERO CELEBRAR MI CUMPLE"`
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Client name
+      
+      Example: `"JULIAN"`
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      Client email
+      
+      Example: `"cliente@gmail.com"`
+    </ResponseField>
+    
+    <ResponseField name="phone_number" type="string">
+      Client phone number
+      
+      Example: `"3108880996"`
+    </ResponseField>
+    
+    <ResponseField name="is_partner" type="boolean">
+      Whether the client is a partner
+      
+      Example: `true`
+    </ResponseField>
+    
+    <ResponseField name="pax" type="integer">
+      Number of attendees
+      
+      Example: `15`
+    </ResponseField>
+    
+    <ResponseField name="init_date" type="string">
+      Event start date and time (ISO 8601)
+      
+      Example: `"2025-11-22T11:30:00.000Z"`
+    </ResponseField>
+    
+    <ResponseField name="end_date" type="string">
+      Event end date and time (ISO 8601)
+      
+      Example: `"2025-11-22T17:30:00.000Z"`
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Request status (PENDIENTE or EN PROGRESO)
+      
+      Example: `"PENDIENTE"`
+    </ResponseField>
+    
+    <ResponseField name="value_aprox" type="string">
+      Approximate value in decimal format
+      
+      Example: `"250000.00"`
+    </ResponseField>
+    
+    <ResponseField name="espacio" type="string">
+      Selected space name
+      
+      Example: `"Salón Principal"`
+    </ResponseField>
+    
+    <ResponseField name="tarifa" type="string">
+      Rate name
+      
+      Example: `"Tarifa Base"`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X GET https://api.example.com/request/get \
+  -H "Cookie: token=your-jwt-token"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.example.com/request/get', {
+  method: 'GET',
+  credentials: 'include' // Include cookies
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.example.com/request/get',
+    cookies={'token': 'your-jwt-token'}
+)
+
+data = response.json()
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 Success
+{
+  "result": [
+    {
+      "id_request": 2,
+      "tittle": "CUMPLEAÑOS",
+      "description": "QUIERO CELEBRAR MI CUMPLE",
+      "name": "JULIAN",
+      "email": "cliente@gmail.com",
+      "phone_number": "3108880996",
+      "is_partner": true,
+      "pax": 15,
+      "init_date": "2025-11-22T11:30:00.000Z",
+      "end_date": "2025-11-22T17:30:00.000Z",
+      "status": "PENDIENTE",
+      "value_aprox": "250000.00",
+      "espacio": "Salón Principal",
+      "tarifa": "Tarifa Base"
+    },
+    {
+      "id_request": 3,
+      "tittle": "BODA",
+      "description": "CELEBRACIÓN DE BODA",
+      "name": "MARIA LOPEZ",
+      "email": "maria@example.com",
+      "phone_number": "3201234567",
+      "is_partner": false,
+      "pax": 100,
+      "init_date": "2026-01-15T14:00:00.000Z",
+      "end_date": "2026-01-15T22:00:00.000Z",
+      "status": "EN PROGRESO",
+      "value_aprox": "800000.00",
+      "espacio": "Salón VIP",
+      "tarifa": "Tarifa Premium"
+    }
+  ]
+}
+```
+
+```json 401 Unauthorized
+{
+  "message": "Token no enviado o inválido"
+}
+```
+
+```json 500 Server Error
+{
+  "message": "Error interno del servidor"
+}
+```
+
+</ResponseExample>

@@ -1,0 +1,201 @@
+---
+title: 'Refresh Access Token'
+api: 'GET /intern/refresh'
+description: 'Obtain a new access token using a refresh token'
+---
+
+## Overview
+
+This endpoint renews the access token using a valid refresh token stored in cookies. When the access token expires, call this endpoint to obtain a new one without requiring the user to log in again.
+
+## Authentication
+
+Requires a valid `refresh_token` cookie. This cookie is automatically set during [login](/api/auth/login).
+
+## Request
+
+No request body or parameters required. The refresh token is automatically read from the `refresh_token` cookie.
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message confirming the access token has been renewed
+</ResponseField>
+
+## Cookies Updated
+
+<ResponseField name="access_token" type="string">
+  A new JWT access token is set in cookies, replacing the expired one.
+  
+  **Cookie Settings:**
+  - `httpOnly: false`
+  - `secure: true`
+  - `sameSite: none`
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X GET https://api.demet.com/intern/refresh \
+  -b cookies.txt \
+  -c cookies.txt
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.demet.com/intern/refresh', {
+  method: 'GET',
+  credentials: 'include' // Include cookies with refresh_token
+});
+
+const data = await response.json();
+if (response.ok) {
+  console.log(data.message); // "Access token renovado"
+  // New access_token is now set in cookies
+}
+```
+
+```python Python
+import requests
+
+session = requests.Session()
+# Assuming session already has the refresh_token cookie from login
+
+url = 'https://api.demet.com/intern/refresh'
+response = session.get(url)
+
+if response.status_code == 200:
+    print(response.json())
+    # New access_token is now in session.cookies
+    new_access_token = session.cookies.get('access_token')
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 Success
+{
+  "message": "Access token renovado"
+}
+```
+
+```json 401 Refresh Token Not Found
+{
+  "message": "Refresh token no encontrado"
+}
+```
+
+```json 400 Invalid or Expired Token
+{
+  "error": "Token inválido o expirado"
+}
+```
+
+</ResponseExample>
+
+## Token Refresh Flow
+
+1. **Access Token Expires**: Client detects 401 Unauthorized on API requests
+2. **Request New Token**: Client calls the refresh endpoint
+3. **Validate Refresh Token**: Server verifies the refresh token from cookies
+4. **Generate New Access Token**: Server creates a new access token with same user claims
+5. **Update Cookie**: New access token is sent back via cookie
+6. **Retry Original Request**: Client retries the failed request with new token
+
+## How It Works
+
+<Expandable title="Token Refresh Process Details">
+
+1. **Extract Refresh Token**: The endpoint reads `refresh_token` from cookies
+2. **Verify Integrity**: The refresh token is verified using JWT verification
+3. **Decode Claims**: User information (id_employee, role) is extracted from the token
+4. **Create Payload**: A new payload is constructed with the decoded user data
+5. **Generate Access Token**: A new access token is generated with the payload
+6. **Set Cookie**: The new access token replaces the old one in cookies
+7. **Return Success**: A confirmation message is returned
+
+```javascript
+// Token payload structure
+{
+  "id_employee": 123,
+  "role": "Administrador"
+}
+```
+
+</Expandable>
+
+## Implementation Example
+
+Here's how to implement automatic token refresh in a client application:
+
+```javascript
+class ApiClient {
+  async request(url, options = {}) {
+    try {
+      // Try the original request
+      let response = await fetch(url, {
+        ...options,
+        credentials: 'include'
+      });
+      
+      // If unauthorized, try refreshing the token
+      if (response.status === 401) {
+        console.log('Access token expired, refreshing...');
+        
+        const refreshResponse = await fetch(
+          'https://api.demet.com/intern/refresh',
+          { method: 'GET', credentials: 'include' }
+        );
+        
+        if (refreshResponse.ok) {
+          console.log('Token refreshed, retrying request...');
+          // Retry the original request with new token
+          response = await fetch(url, {
+            ...options,
+            credentials: 'include'
+          });
+        } else {
+          // Refresh failed, redirect to login
+          console.log('Refresh failed, redirecting to login...');
+          window.location.href = '/login';
+          return;
+        }
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Request failed:', error);
+      throw error;
+    }
+  }
+}
+
+// Usage
+const client = new ApiClient();
+const response = await client.request('https://api.demet.com/intern/get');
+const data = await response.json();
+```
+
+## Error Handling
+
+| Status Code | Error | Action |
+|-------------|-------|--------|
+| 401 | Refresh token not found | User must log in again |
+| 400 | Token invalid or expired | User must log in again |
+| 200 | Success | Continue with new access token |
+
+## Security Notes
+
+- Refresh tokens have a longer lifetime than access tokens
+- The refresh token is validated using JWT verification
+- If the refresh token is invalid or expired, the user must log in again
+- Refresh tokens cannot be used to access API endpoints directly
+- Both tokens use the same signing key but different expiration times
+
+## Best Practices
+
+1. **Automatic Refresh**: Implement automatic token refresh in your API client
+2. **Handle Failures**: If refresh fails, redirect to login page
+3. **Don't Cache**: Don't store tokens in localStorage (use cookies only)
+4. **Retry Logic**: Automatically retry failed requests after refreshing
+5. **Single Refresh**: Ensure only one refresh request is in flight at a time

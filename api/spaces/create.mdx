@@ -1,0 +1,110 @@
+---
+title: 'Create Space'
+api: 'POST /space/register'
+description: 'Register a new event space in the system'
+---
+
+## Authentication
+
+This endpoint requires authentication. The JWT token must be provided in the `access_token` cookie.
+
+## Request Body
+
+<ParamField body="v_name" type="string" required>
+  Name of the space
+  
+  Example: `"Salón Principal"`
+</ParamField>
+
+<ParamField body="v_descrip" type="string" required>
+  Description of the space including features and amenities
+  
+  Example: `"Espacio amplio con sonido y sillas incluidas"`
+</ParamField>
+
+<ParamField body="v_isPartner" type="boolean" required>
+  Indicates if the space belongs to a partner
+  
+  Example: `true`
+</ParamField>
+
+<ParamField body="v_pax" type="number" required>
+  Maximum capacity (number of people)
+  
+  Example: `80`
+</ParamField>
+
+<ParamField body="v_value4" type="number" required>
+  Price for 4-hour rental period
+  
+  Example: `250000`
+</ParamField>
+
+<ParamField body="v_value8" type="number" required>
+  Price for 8-hour rental period
+  
+  Example: `400000`
+</ParamField>
+
+<ParamField body="v_value_extra" type="number" required>
+  Price for each additional hour beyond 8 hours
+  
+  Example: `60000`
+</ParamField>
+
+<ParamField body="v_url_img" type="array" required>
+  Array of image URLs for the space (minimum 1 image required)
+  
+  Example: `["https://midominio.com/imagenes/salon1.jpg", "https://midominio.com/imagenes/salon2.jpg"]`
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message confirming space registration
+  
+  Example: `"Registro Exitoso"`
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X POST https://api.demet.com/space/register \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN" \
+  -d '{
+    "v_name": "Salón Principal",
+    "v_descrip": "Espacio amplio con sonido y sillas incluidas",
+    "v_isPartner": true,
+    "v_pax": 80,
+    "v_value4": 250000,
+    "v_value8": 400000,
+    "v_value_extra": 60000,
+    "v_url_img": [
+      "https://midominio.com/imagenes/salon1.jpg",
+      "https://midominio.com/imagenes/salon2.jpg"
+    ]
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "message": "Registro Exitoso"
+}
+```
+
+## Error Responses
+
+<ResponseField name="400" type="error">
+  Validation error in the submitted data. Check that all required fields are provided and valid.
+</ResponseField>
+
+<ResponseField name="401" type="error">
+  Authentication error. Token not sent, invalid, or expired.
+</ResponseField>
+
+<ResponseField name="500" type="error">
+  Internal server error.
+</ResponseField>

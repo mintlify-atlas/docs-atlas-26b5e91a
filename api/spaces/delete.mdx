@@ -1,0 +1,68 @@
+---
+title: 'Delete Space'
+api: 'DELETE /space/delete'
+description: 'Remove an event space from the system'
+---
+
+## Authentication
+
+This endpoint requires authentication. The JWT token must be provided in the `access_token` cookie.
+
+## Request Body
+
+<ParamField body="v_name" type="string" required>
+  Name of the space to delete
+  
+  Example: `"Salón Principal"`
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message confirming space deletion
+  
+  Example: `"Eliminacion Exitosa"`
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X DELETE https://api.demet.com/space/delete \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN" \
+  -d '{
+    "v_name": "Salón Principal"
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "message": "Eliminacion Exitosa"
+}
+```
+
+## Error Responses
+
+<ResponseField name="400" type="error">
+  Invalid data or space not found with the provided name.
+</ResponseField>
+
+<ResponseField name="401" type="error">
+  Authentication error. Token not sent, invalid, or expired.
+</ResponseField>
+
+<ResponseField name="500" type="error">
+  Internal server error.
+</ResponseField>
+
+## Important Notes
+
+<Warning>
+  This operation is permanent and cannot be undone. Ensure you want to delete the space before making this request.
+</Warning>
+
+<Note>
+  The space is identified by its name. Make sure to provide the exact name as it appears in the system.
+</Note>

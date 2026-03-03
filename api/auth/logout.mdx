@@ -1,0 +1,140 @@
+---
+title: 'Logout'
+api: 'GET /intern/logout'
+description: 'End the current session and clear authentication cookies'
+---
+
+## Overview
+
+This endpoint clears the `access_token` and `refresh_token` cookies, effectively logging out the user and ending their session.
+
+## Request
+
+No request body or parameters required. The endpoint automatically clears cookies associated with the current session.
+
+## Response
+
+<ResponseField name="message" type="string">
+  Confirmation message that the session has been closed
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X GET https://api.demet.com/intern/logout \
+  -b cookies.txt \
+  -c cookies.txt
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.demet.com/intern/logout', {
+  method: 'GET',
+  credentials: 'include' // Include cookies
+});
+
+const data = await response.json();
+console.log(data.message);
+```
+
+```python Python
+import requests
+
+session = requests.Session()
+# Assuming you have logged in previously with this session
+
+url = 'https://api.demet.com/intern/logout'
+response = session.get(url)
+
+print(response.json())
+# Cookies are now cleared from the session
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 Success
+{
+  "message": "Sesión cerrada"
+}
+```
+
+```json 400 Error
+{
+  "error": "Error interno"
+}
+```
+
+</ResponseExample>
+
+## Behavior
+
+When this endpoint is called:
+
+1. The server clears the `access_token` cookie
+2. The server clears the `refresh_token` cookie
+3. The user is no longer authenticated
+4. Any subsequent requests to protected endpoints will fail with 401 Unauthorized
+
+## Cookies Cleared
+
+<Expandable title="Cleared Cookies">
+
+| Cookie Name | Description |
+|-------------|-------------|
+| `access_token` | JWT token used for API authentication |
+| `refresh_token` | JWT token used for refreshing access tokens |
+
+Both cookies are cleared using the `res.clearCookie()` method, which sets their expiration date to the past.
+
+</Expandable>
+
+## Usage Notes
+
+- This endpoint can be called even if the user is not currently logged in
+- No authentication is required to call this endpoint
+- After logout, tokens cannot be recovered - the user must login again
+- Client applications should also clear any locally stored user data
+
+## Best Practices
+
+1. **Call on User Logout**: Always call this endpoint when the user explicitly logs out
+2. **Clear Local State**: Remove any user-related data from local storage/memory
+3. **Redirect to Login**: Redirect the user to the login page after logout
+4. **Handle Errors Gracefully**: Even if the logout fails, clear local state and redirect
+
+## Example: Complete Logout Flow
+
+```javascript
+async function logout() {
+  try {
+    // Call the logout endpoint
+    const response = await fetch('https://api.demet.com/intern/logout', {
+      method: 'GET',
+      credentials: 'include'
+    });
+    
+    const data = await response.json();
+    console.log(data.message); // "Sesión cerrada"
+    
+    // Clear any local user data
+    localStorage.removeItem('user');
+    sessionStorage.clear();
+    
+    // Redirect to login page
+    window.location.href = '/login';
+  } catch (error) {
+    console.error('Logout error:', error);
+    // Still clear local data and redirect
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  }
+}
+```
+
+## Security Considerations
+
+- Cookies are cleared on the server side, preventing token reuse
+- Even if a client retains a copy of the token, the logout action invalidates the session
+- Users should be redirected to a public page after logout to prevent unauthorized access
+- Consider implementing token blacklisting for additional security in high-security applications

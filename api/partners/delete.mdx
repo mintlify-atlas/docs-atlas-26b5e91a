@@ -1,0 +1,107 @@
+---
+title: 'Delete Partner'
+api: 'DELETE /partner/delete'
+description: 'Remove a partner from the DEMET system'
+---
+
+## Overview
+
+This endpoint allows you to delete an existing partner from the system. Authentication is required via JWT token in the `access_token` cookie. Both the partner ID and email must be provided to confirm the deletion.
+
+## Request Body
+
+<ParamField body="id" type="string" required>
+  Unique identifier of the partner to delete
+  
+  Example: `"P001"`
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Email address of the partner (used for confirmation)
+  
+  Example: `"carlos.rodriguez@example.com"`
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message confirming partner deletion
+  
+  Example: `"Socio Eliminado Exitosamente"`
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE https://api.example.com/partner/delete \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN" \
+  -d '{
+    "id": "P001",
+    "email": "carlos.rodriguez@example.com"
+  }'
+```
+
+```javascript JavaScript
+fetch('https://api.example.com/partner/delete', {
+  method: 'DELETE',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  credentials: 'include', // Include cookies
+  body: JSON.stringify({
+    id: 'P001',
+    email: 'carlos.rodriguez@example.com'
+  })
+})
+.then(response => response.json())
+.then(data => console.log(data));
+```
+
+```python Python
+import requests
+
+url = "https://api.example.com/partner/delete"
+cookies = {"access_token": "YOUR_JWT_TOKEN"}
+data = {
+    "id": "P001",
+    "email": "carlos.rodriguez@example.com"
+}
+
+response = requests.delete(url, json=data, cookies=cookies)
+print(response.json())
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 Success
+{
+  "message": "Socio Eliminado Exitosamente"
+}
+```
+
+```json 400 Bad Request
+{
+  "message": "Socio no encontrado o datos inválidos"
+}
+```
+
+```json 401 Unauthorized
+{
+  "message": "Token no enviado o inválido"
+}
+```
+
+```json 500 Internal Server Error
+{
+  "message": "Error interno del servidor"
+}
+```
+
+<Warning>
+  This action is irreversible. Make sure you want to permanently delete the partner before making this request. Both the ID and email must match an existing partner for the deletion to succeed.
+</Warning>

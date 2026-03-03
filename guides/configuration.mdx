@@ -1,0 +1,502 @@
+---
+title: 'Configuration'
+description: 'Complete guide to environment variables and configuration options'
+icon: 'gear'
+---
+
+## Overview
+
+The DEMET Backend API uses environment variables for configuration management through the `dotenv` package. This approach keeps sensitive data out of your codebase and allows different configurations for development, staging, and production environments.
+
+## Environment Variables
+
+All configuration is stored in a `.env` file at the root of your project.
+
+### Required Variables
+
+<ParamField path="DATABASE_URL" type="string" required>
+  PostgreSQL connection string
+  
+  **Format:** `postgresql://username:password@host:port/database`
+  
+  **Example:** `postgresql://postgres:mypassword@localhost:5432/demet_db`
+</ParamField>
+
+<ParamField path="ACCESS_SECRET" type="string" required>
+  Secret key for signing access tokens (JWT)
+  
+  **Recommendation:** Generate a strong random string (32+ characters)
+  
+  **Example:** `a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6`
+</ParamField>
+
+<ParamField path="ACCESS_EXPIRE_IN" type="string" required>
+  Expiration time for access tokens
+  
+  **Format:** Uses `jsonwebtoken` time spans (e.g., `60`, `2d`, `10h`, `7d`)
+  
+  **Default:** `1h` (1 hour)
+  
+  **Recommendation:** Short duration (15m - 1h) for better security
+</ParamField>
+
+<ParamField path="REFRESH_SECRET" type="string" required>
+  Secret key for signing refresh tokens (JWT)
+  
+  **Important:** Must be different from `ACCESS_SECRET`
+  
+  **Example:** `z9y8x7w6v5u4t3s2r1q0p9o8n7m6l5k4`
+</ParamField>
+
+<ParamField path="REFRESH_EXPIRE_IN" type="string" required>
+  Expiration time for refresh tokens
+  
+  **Default:** `7d` (7 days)
+  
+  **Recommendation:** Longer duration (7d - 30d) for better UX
+</ParamField>
+
+<ParamField path="PORT" type="number" required>
+  Port number where the server will listen
+  
+  **Default:** `3002`
+  
+  **Range:** 1024-65535 (avoid reserved ports)
+</ParamField>
+
+<ParamField path="GOOGLE_USER" type="string" required>
+  Gmail address for sending emails via Nodemailer
+  
+  **Example:** `noreply@yourdomain.com` or `your-email@gmail.com`
+</ParamField>
+
+<ParamField path="GOOGLE_PWD" type="string" required>
+  Gmail App Password (not your regular password)
+  
+  **Setup:** Generate at [Google App Passwords](https://myaccount.google.com/apppasswords)
+  
+  **Format:** 16-character string without spaces
+</ParamField>
+
+<ParamField path="EMAIL_ADMIN" type="string" required>
+  Administrator email address for receiving notifications
+  
+  **Example:** `admin@clubelmeta.com`
+  
+  **Purpose:** Receives alerts about new reservation requests
+</ParamField>
+
+## Complete Configuration Example
+
+<CodeGroup>
+```env .env (Development)
+DATABASE_URL=postgresql://postgres:devpassword@localhost:5432/demet_dev
+ACCESS_SECRET=dev-access-secret-key-change-in-production
+ACCESS_EXPIRE_IN=1h
+REFRESH_SECRET=dev-refresh-secret-key-change-in-production
+REFRESH_EXPIRE_IN=7d
+PORT=3002
+GOOGLE_USER=dev-noreply@gmail.com
+GOOGLE_PWD=abcd efgh ijkl mnop
+EMAIL_ADMIN=admin@example.com
+```
+
+```env .env (Production)
+DATABASE_URL=postgresql://prod_user:strongpassword@db.example.com:5432/demet_prod
+ACCESS_SECRET=a3f8b2e9c4d7a1f5e9b3c6d8a2e5f7b1c4d6e8a1f3b5c7d9e2f4a6b8c1d3e5
+ACCESS_EXPIRE_IN=15m
+REFRESH_SECRET=z8y7x6w5v4u3t2s1r0q9p8o7n6m5l4k3j2i1h0g9f8e7d6c5b4a3z2y1x0w9
+REFRESH_EXPIRE_IN=30d
+PORT=3002
+GOOGLE_USER=noreply@clubelmeta.com
+GOOGLE_PWD=abcdefghijklmnop
+EMAIL_ADMIN=admin@clubelmeta.com
+```
+
+```env .env.example (Template)
+DATABASE_URL=
+ACCESS_SECRET=
+ACCESS_EXPIRE_IN=1h
+REFRESH_SECRET=
+REFRESH_EXPIRE_IN=7d
+PORT=3002
+GOOGLE_USER=
+GOOGLE_PWD=
+EMAIL_ADMIN=
+```
+</CodeGroup>
+
+## Configuration by Environment
+
+### Development Environment
+
+<Steps>
+  <Step title="Local Database">
+    Use a local PostgreSQL instance:
+    ```env
+    DATABASE_URL=postgresql://postgres:password@localhost:5432/demet_dev
+    ```
+  </Step>
+
+  <Step title="Relaxed Token Expiration">
+    Longer access token duration for easier debugging:
+    ```env
+    ACCESS_EXPIRE_IN=8h
+    REFRESH_EXPIRE_IN=30d
+    ```
+  </Step>
+
+  <Step title="Test Email Account">
+    Use a dedicated test Gmail account:
+    ```env
+    GOOGLE_USER=test.demet@gmail.com
+    EMAIL_ADMIN=dev@localhost
+    ```
+  </Step>
+</Steps>
+
+### Production Environment
+
+<Steps>
+  <Step title="Secure Database Connection">
+    Use SSL and strong credentials:
+    ```env
+    DATABASE_URL=postgresql://user:password@host:5432/db?sslmode=require
+    ```
+  </Step>
+
+  <Step title="Strong JWT Secrets">
+    Generate cryptographically secure secrets:
+    ```bash
+    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+    ```
+  </Step>
+
+  <Step title="Short Access Token Duration">
+    Minimize security risk:
+    ```env
+    ACCESS_EXPIRE_IN=15m
+    ```
+  </Step>
+
+  <Step title="Production Email">
+    Use your domain's email:
+    ```env
+    GOOGLE_USER=noreply@yourdomain.com
+    ```
+  </Step>
+</Steps>
+
+## Loading Configuration
+
+The application loads environment variables at startup:
+
+<CodeGroup>
+```javascript server.js
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Servidor escuchando en http://localhost:${PORT}`);
+});
+```
+
+```javascript lib/db.js
+import { Pool } from "pg";
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL
+});
+
+export default pool;
+```
+
+```javascript service/email.service.js
+import nodemailer from "nodemailer";
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+export const transporterGmail = async() => {
+    const transport = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+            user: process.env.GOOGLE_USER,
+            pass: process.env.GOOGLE_PWD
+        }
+    });
+    return transport;
+}
+```
+</CodeGroup>
+
+## Security Best Practices
+
+<Warning>
+  **Never commit sensitive credentials to version control!**
+</Warning>
+
+### 1. Add .env to .gitignore
+
+```gitignore .gitignore
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log
+```
+
+### 2. Use Different Secrets Per Environment
+
+<Tabs>
+  <Tab title="Do This">
+    ```env
+    # Development
+    ACCESS_SECRET=dev-secret-abc123xyz
+    
+    # Production  
+    ACCESS_SECRET=prod-secret-xyz789def
+    ```
+    Different secrets prevent token reuse across environments.
+  </Tab>
+  
+  <Tab title="Don't Do This">
+    ```env
+    # Same secret everywhere
+    ACCESS_SECRET=same-secret-123
+    ```
+    Avoid reusing secrets across environments.
+  </Tab>
+</Tabs>
+
+### 3. Rotate Secrets Regularly
+
+Change JWT secrets periodically:
+- **Development:** Monthly
+- **Production:** Quarterly or after suspected breach
+
+### 4. Use Strong Passwords
+
+Generate secure random strings:
+
+```bash
+# Generate 32-byte hex string
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# Generate base64 string
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+
+# Or use OpenSSL
+openssl rand -hex 32
+```
+
+### 5. Database Connection Security
+
+<Tabs>
+  <Tab title="Production">
+    ```env
+    # Use SSL, read-only replicas, connection pooling
+    DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=require&poolsize=10
+    ```
+  </Tab>
+  
+  <Tab title="Development">
+    ```env
+    # Local connection without SSL
+    DATABASE_URL=postgresql://postgres:dev@localhost:5432/demet_dev
+    ```
+  </Tab>
+</Tabs>
+
+## Gmail Configuration
+
+### Setting Up App Passwords
+
+<Steps>
+  <Step title="Enable 2-Factor Authentication">
+    Go to [Google Account Security](https://myaccount.google.com/security) and enable 2FA
+  </Step>
+
+  <Step title="Generate App Password">
+    Visit [App Passwords](https://myaccount.google.com/apppasswords)
+    
+    - Select app: "Mail"
+    - Select device: "Other (Custom name)"
+    - Enter: "DEMET Backend"
+    - Click "Generate"
+  </Step>
+
+  <Step title="Copy Password">
+    Copy the 16-character password (spaces don't matter):
+    ```env
+    GOOGLE_PWD=abcdefghijklmnop
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  Regular Gmail passwords won't work. You must use an App Password.
+</Note>
+
+## JWT Token Configuration
+
+### Token Structure
+
+The API uses dual-token authentication:
+
+1. **Access Token** - Short-lived, stored in HTTP-only cookie
+2. **Refresh Token** - Long-lived, used to get new access tokens
+
+### Token Expiration Strategy
+
+<CardGroup cols={2}>
+  <Card title="Access Token" icon="clock">
+    **Duration:** 15m - 1h
+    
+    **Why short?** Minimizes damage if compromised
+    
+    **Stored:** HTTP-only cookie
+  </Card>
+  
+  <Card title="Refresh Token" icon="arrows-rotate">
+    **Duration:** 7d - 30d
+    
+    **Why long?** Better user experience
+    
+    **Stored:** HTTP-only cookie
+  </Card>
+</CardGroup>
+
+### Example Configuration
+
+```env
+# Recommended for production
+ACCESS_EXPIRE_IN=15m
+REFRESH_EXPIRE_IN=7d
+
+# Alternative for development
+ACCESS_EXPIRE_IN=8h
+REFRESH_EXPIRE_IN=30d
+```
+
+## CORS Configuration
+
+CORS is configured in `server.js`:
+
+```javascript
+app.use(cors({
+  origin: [
+    "https://clubmetabros.vercel.app",  // Production frontend
+    "http://localhost:3000"              // Local development
+  ],
+  credentials: true  // Allow cookies
+}));
+```
+
+To add more origins:
+
+```javascript
+const allowedOrigins = [
+  process.env.FRONTEND_URL_PROD,
+  process.env.FRONTEND_URL_DEV,
+  "http://localhost:3000",
+  "http://localhost:3001"
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
+```
+
+## Validation
+
+Verify your configuration:
+
+<CodeGroup>
+```javascript verify-config.js
+import dotenv from 'dotenv';
+dotenv.config();
+
+const requiredVars = [
+  'DATABASE_URL',
+  'ACCESS_SECRET',
+  'REFRESH_SECRET',
+  'PORT',
+  'GOOGLE_USER',
+  'GOOGLE_PWD',
+  'EMAIL_ADMIN'
+];
+
+const missing = requiredVars.filter(v => !process.env[v]);
+
+if (missing.length > 0) {
+  console.error('Missing required environment variables:');
+  console.error(missing.join(', '));
+  process.exit(1);
+}
+
+console.log('✓ All required environment variables are set');
+```
+</CodeGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title=".env file not loading">
+    - Ensure `.env` is in the project root
+    - Check file name (no spaces, no extensions)
+    - Verify `dotenv.config()` is called before using variables
+    - Try absolute path: `dotenv.config({ path: '/path/to/.env' })`
+  </Accordion>
+
+  <Accordion title="Database connection fails">
+    - Verify PostgreSQL is running
+    - Test connection string format
+    - Check network access and firewall rules
+    - Validate username/password
+  </Accordion>
+
+  <Accordion title="Email sending fails">
+    - Use App Password, not regular password
+    - Enable 2FA on Gmail account
+    - Check for spaces in GOOGLE_PWD
+    - Verify "Less secure app access" is OFF (use App Passwords instead)
+  </Accordion>
+
+  <Accordion title="JWT verification fails">
+    - Ensure ACCESS_SECRET and REFRESH_SECRET are different
+    - Check for leading/trailing whitespace
+    - Verify secrets match on all servers
+    - Don't change secrets without invalidating existing tokens
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Setup" icon="database" href="/guides/database">
+    Configure PostgreSQL schema and connections
+  </Card>
+  <Card title="Email Notifications" icon="envelope" href="/guides/email-notifications">
+    Set up email templates and sending
+  </Card>
+  <Card title="Authentication" icon="lock" href="/api-reference/auth">
+    Learn about JWT authentication endpoints
+  </Card>
+  <Card title="Deployment" icon="server" href="/guides/deployment">
+    Deploy to production environments
+  </Card>
+</CardGroup>

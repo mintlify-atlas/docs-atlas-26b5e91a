@@ -1,0 +1,426 @@
+---
+title: 'Architecture'
+description: 'Understanding the modular architecture of DEMET Backend API'
+icon: 'diagram-project'
+---
+
+## Overview
+
+DEMET Backend API follows a **layered, modular architecture** that separates concerns into distinct layers: routes, controllers, services, and middleware. This architecture promotes maintainability, testability, and scalability.
+
+<Info>
+The API is built with **Express.js** and **PostgreSQL**, following RESTful principles and Node.js best practices.
+</Info>
+
+## Architecture Layers
+
+The application follows a three-tier architecture pattern:
+
+```
+Client Request
+     ↓
+  Routes (routing)
+     ↓
+  Middleware (validation, auth, authorization)
+     ↓
+  Controllers (request handling)
+     ↓
+  Services (business logic)
+     ↓
+  Database (PostgreSQL)
+```
+
+### 1. Routes Layer
+
+Routes define the API endpoints and orchestrate the middleware chain before passing requests to controllers.
+
+**Location**: `/routes/`
+
+<Accordion title="Example: Authentication Routes">
+```javascript
+import express from 'express';
+import AuthController from "../controller/auth.controller.js";
+import { validateSchema } from '../middleware/validate.js';
+import { registerSchema, loginSchema } from '../validator/auth.schema.js';
+import { verifyRol } from '../middleware/rolAccess.js';
+import { verifyToken } from '../middleware/verifyToken.js';
+
+const router = express.Router();
+
+// Public route - no authentication required
+router.post("/login", validateSchema(loginSchema), AuthController.login);
+
+// Protected route - requires Admin role
+router.post("/signup", verifyRol, validateSchema(registerSchema), AuthController.register);
+
+// Protected route - requires valid token
+router.get('/me', verifyToken, AuthController.me);
+
+export default router;
+```
+*Source: `/routes/auth.routes.js:103-308`*
+</Accordion>
+
+### 2. Middleware Layer
+
+Middleware functions process requests before they reach controllers, handling validation, authentication, and authorization.
+
+**Location**: `/middleware/`
+
+#### Authentication Middleware
+
+The `verifyToken` middleware validates JWT tokens stored in HTTP-only cookies:
+
+```javascript
+import jwt from 'jsonwebtoken';
+
+export const verifyToken = (req, res, next) => {
+    const token = req.cookies.access_token;
+    if(!token) return res.status(401).send({auth:false, message: 'Token No Enviado'});
+    
+    jwt.verify(token, process.env.ACCESS_SECRET, async(err, decoded)=>
+        if(err) return res.status(401).send({auth:false, message:'Token Invalido o Expirado'});
+        req.user = decoded;
+        next();
+    })
+}
+```
+*Source: `/middleware/verifyToken.js:3-16`*
+
+#### Authorization Middleware
+
+The `verifyRol` middleware restricts access to Admin users only:
+
+```javascript
+export const verifyRol = (req, res, next) => {
+    const token = req.cookies.access_token;
+    if(!token) return res.status(401).send({auth:false, message: 'Token No Enviado'});
+    
+    jwt.verify(token, process.env.ACCESS_SECRET, async(err, decoded)=>{
+        if(err) return res.status(401).send({auth:false, message:'Token Invalido o Expirado'});
+        // Validate user role
+        if(decoded.role != "Administrador") 
+            return res.status(401).send({auth:false, message:'Usuario/Rol No Autorizado', role: decoded.role});
+        req.user = decoded;
+        next();
+    })
+}
+```
+*Source: `/middleware/rolAccess.js:3-20`*
+
+#### Validation Middleware
+
+The `validateSchema` middleware uses Zod for request validation:
+
+```javascript
+export const validateSchema = (schema) => {
+    return (req, res, next) => {
+        try {
+            const match = schema.safeParse(req.body);
+            if(!match.success) return res.status(400).json(match.error.message);
+            next(); 
+        } catch (error) {
+            return res.status(500).json({error: error})
+        }
+    }
+}
+```
+*Source: `/middleware/validate.js:3-13`*
+
+### 3. Controllers Layer
+
+Controllers handle HTTP requests and responses, delegating business logic to services.
+
+**Location**: `/controller/`
+
+<Accordion title="Example: Reserve Controller">
+```javascript
+import { reserveRegister, reserveUpdate, reserveDelete, reserveGet } from "../service/reserve.service.js";
+
+export const reserveController = {
+    register : async(req, res) => {
+        try {
+            const { v_id_reservation, v_name, v_email, v_phone_number, 
+                    v_init_date, v_end_date, v_pax, v_status, v_extras, 
+                    v_amount, v_total_value, v_fk_rate } = await req.body;
+            
+            await reserveRegister(
+                v_id_reservation, v_name, v_email, v_phone_number,
+                v_init_date, v_end_date, v_pax, v_status, v_extras,
+                v_amount, v_total_value, v_fk_rate, req.user.id_employee
+            );
+            
+            return res.status(200).json({message:'Registro Exitoso'})
+        } catch (error) {
+            const status = error.statusCode || 500;
+            return res.status(status).json({message: error.message})
+        }
+    },
+    // ... other methods
+}
+```
+*Source: `/controller/reserve.controller.js:4-19`*
+</Accordion>
+
+<Note>
+Controllers **never contain business logic**. They only handle request/response mapping and error formatting.
+</Note>
+
+### 4. Services Layer
+
+Services contain business logic and interact with the database.
+
+**Location**: `/service/`
+
+<Accordion title="Example: Reserve Service">
+```javascript
+import pool from "../lib/db.js";
+import { errorHandler } from "../util/errorHandler.js";
+
+export const reserveRegister = async(
+    v_id_reservation, v_name, v_email, v_phone_number,
+    v_init_date, v_end_date, v_pax, v_status, v_extras,
+    v_amount, v_total_value, v_fk_rate, v_fk_employee 
+) => {
+    try {
+        await pool.query(
+            'CALL p_insert_reservation($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13);',
+            [
+                v_id_reservation, v_name, v_email, v_phone_number,
+                v_init_date, v_end_date, v_pax, v_status, v_extras,
+                v_amount, v_total_value, v_fk_rate, v_fk_employee 
+            ]
+        )
+    } catch (error) {
+        errorHandler(error)
+    }
+}
+```
+*Source: `/service/reserve.service.js:5-42`*
+</Accordion>
+
+### 5. Database Layer
+
+Database connections are managed through a PostgreSQL connection pool.
+
+**Location**: `/lib/db.js`
+
+```javascript
+import { Pool } from "pg";
+import dotenv from 'dotenv';
+
+dotenv.config()
+
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL
+})
+
+export default pool;
+```
+*Source: `/lib/db.js:1-11`*
+
+<Warning>
+The API uses **PostgreSQL stored procedures** for complex database operations, ensuring data integrity and performance.
+</Warning>
+
+## Project Structure
+
+```
+source/
+├── controller/          # HTTP request handlers
+│   ├── auth.controller.js
+│   ├── reserve.controller.js
+│   ├── partner.controller.js
+│   ├── space.controller.js
+│   ├── rate.controller.js
+│   ├── extra.controller.js
+│   ├── request.controller.js
+│   ├── report.controller.js
+│   └── log_reserve.controller.js
+│
+├── service/             # Business logic & database operations
+│   ├── auth.service.js
+│   ├── reserve.service.js
+│   ├── partner.service.js
+│   ├── space.service.js
+│   ├── rate.service.js
+│   ├── extra.service.js
+│   ├── request.service.js
+│   ├── report.service.js
+│   ├── email.service.js
+│   └── excel.service.js
+│
+├── routes/              # API endpoint definitions
+│   ├── auth.routes.js
+│   ├── reserve.routes.js
+│   ├── partner.route.js
+│   ├── space.routes.js
+│   ├── rate.routes.js
+│   ├── extra.route.js
+│   ├── request.route.js
+│   ├── report.routes.js
+│   └── log_reserve.routes.js
+│
+├── middleware/          # Request processing middleware
+│   ├── verifyToken.js   # JWT authentication
+│   ├── rolAccess.js     # Role-based authorization
+│   └── validate.js      # Zod schema validation
+│
+├── validator/           # Zod validation schemas
+│   ├── auth.schema.js
+│   ├── reserve.schema.js
+│   ├── partner.schema.js
+│   ├── space.schema.js
+│   ├── rate.schema.js
+│   ├── extra.schema.js
+│   └── request.schema.js
+│
+├── util/                # Utility functions
+│   ├── errorHandler.js  # Centralized error handling
+│   └── AppError.js      # Custom error class
+│
+├── lib/                 # Library configurations
+│   └── db.js            # PostgreSQL connection pool
+│
+├── server.js            # Application entry point
+└── swagger.js           # API documentation config
+```
+
+## Application Entry Point
+
+The main application is configured in `server.js`:
+
+```javascript
+import express from "express"; 
+import cors from 'cors';
+import cookieParser from "cookie-parser";
+import AuthRoutes from './routes/auth.routes.js';
+import partnerRoutes from './routes/partner.route.js';
+import spaceRoutes from './routes/space.routes.js';
+// ... other imports
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware configuration
+app.use(cookieParser());
+app.use(cors({
+  origin: [
+    "https://clubmetabros.vercel.app",
+    "http://localhost:3000"
+  ],
+  credentials: true
+}));
+app.use(express.json());
+
+// Route registration
+app.use('/intern', AuthRoutes);
+app.use('/partner/', partnerRoutes)
+app.use('/space/', spaceRoutes)
+app.use('/rate/', rateRoutes)
+app.use('/extra/', extraRoutes)
+app.use('/reserve/', reserveRoutes)
+app.use('/request/', requestRoutes)
+app.use('/report/', reportRoutes)
+app.use('/log/reserve/', logReserveRoutes)
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Servidor escuchando en http://localhost:${PORT}`);
+});
+```
+*Source: `/server.js:1-65`*
+
+## Request Flow Example
+
+Here's how a typical authenticated request flows through the system:
+
+<Steps>
+  <Step title="Client sends request">
+    ```bash
+    POST /reserve/register
+    Cookie: access_token=eyJhbGc...
+    Content-Type: application/json
+    
+    {
+      "v_id_reservation": "RSV00123",
+      "v_name": "Juan Pérez",
+      "v_email": "juan@example.com",
+      // ... more fields
+    }
+    ```
+  </Step>
+  
+  <Step title="Route matches and applies middleware">
+    The route at `/routes/reserve.routes.js:120` applies:
+    1. `verifyRol` - Verifies JWT and checks Admin role
+    2. `validateSchema(insertReservationSchema)` - Validates request body
+  </Step>
+  
+  <Step title="Controller receives request">
+    `reserveController.register()` extracts request data and calls the service layer.
+  </Step>
+  
+  <Step title="Service executes business logic">
+    `reserveRegister()` calls the PostgreSQL stored procedure `p_insert_reservation`.
+  </Step>
+  
+  <Step title="Response sent to client">
+    ```json
+    {
+      "message": "Registro Exitoso"
+    }
+    ```
+  </Step>
+</Steps>
+
+## Key Design Principles
+
+<CardGroup cols={2}>
+  <Card title="Separation of Concerns" icon="layer-group">
+    Each layer has a single responsibility, making the codebase maintainable and testable.
+  </Card>
+  
+  <Card title="Dependency Injection" icon="plug">
+    Services are imported and called by controllers, allowing easy mocking for tests.
+  </Card>
+  
+  <Card title="Middleware Chaining" icon="link">
+    Express middleware pattern enables reusable authentication, validation, and error handling.
+  </Card>
+  
+  <Card title="Error Centralization" icon="triangle-exclamation">
+    All errors flow through `errorHandler()` for consistent error responses.
+  </Card>
+</CardGroup>
+
+## Database Interaction Pattern
+
+The API uses **PostgreSQL stored procedures** for database operations:
+
+<Note>
+**Why Stored Procedures?**
+- Encapsulate complex business logic in the database
+- Better performance for complex queries
+- Consistent data validation rules
+- Reduce application-database round trips
+</Note>
+
+```javascript
+// Service layer calls stored procedure
+await pool.query(
+    'CALL p_insert_reservation($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13);',
+    [v_id_reservation, v_name, v_email, /* ... */]
+)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Security" icon="shield-halved" href="/concepts/security">
+    Learn about JWT authentication, role-based access control, and security best practices.
+  </Card>
+  
+  <Card title="Error Handling" icon="bug" href="/concepts/error-handling">
+    Understand how errors are handled and formatted throughout the API.
+  </Card>
+</CardGroup>

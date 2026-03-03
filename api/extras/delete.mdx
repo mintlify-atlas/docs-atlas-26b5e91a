@@ -1,0 +1,109 @@
+---
+title: 'Delete Extra'
+api: 'DELETE /extra/delete'
+description: 'Remove an extra item from the system'
+---
+
+This endpoint allows you to delete an existing extra item (such as chairs, tables, tablecloths, etc.) from the system. The user must be authenticated with a valid JWT token stored in the `access_token` cookie.
+
+## Request Body
+
+<ParamField body="v_id_extra" type="number" required>
+  ID of the extra item to delete. Must be a positive integer.
+  
+  Example: `3`
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message confirming the extra was deleted
+  
+  Example: `"Eliminacion Exitosa"`
+</ResponseField>
+
+## Status Codes
+
+<ResponseField name="200" type="Success">
+  Extra deleted successfully
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Validation error in the submitted data
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Token not sent or invalid (cookie missing or expired)
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  No extra exists with the provided ID
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Internal server error
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X DELETE https://api.example.com/extra/delete \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN" \
+  -d '{
+    "v_id_extra": 3
+  }'
+```
+
+```javascript JavaScript
+fetch('https://api.example.com/extra/delete', {
+  method: 'DELETE',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include',
+  body: JSON.stringify({
+    v_id_extra: 3
+  })
+});
+```
+
+```python Python
+import requests
+
+url = 'https://api.example.com/extra/delete'
+cookies = {'access_token': 'YOUR_JWT_TOKEN'}
+data = {
+    'v_id_extra': 3
+}
+
+response = requests.delete(url, json=data, cookies=cookies)
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success Response
+{
+  "message": "Eliminacion Exitosa"
+}
+```
+
+```json Error Response (Validation)
+{
+  "message": "El ID del extra debe ser un número positivo"
+}
+```
+
+```json Error Response (Not Found)
+{
+  "message": "No existe un extra con el ID proporcionado"
+}
+```
+
+</ResponseExample>
+
+<Warning>
+Deleting an extra is a permanent action. Make sure the extra is not currently associated with any active bookings before deletion.
+</Warning>

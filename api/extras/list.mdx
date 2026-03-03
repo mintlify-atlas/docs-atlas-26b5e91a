@@ -1,0 +1,115 @@
+---
+title: 'List Extras'
+api: 'GET /extra/get'
+description: 'Retrieve all available extras in the system'
+---
+
+This endpoint returns all extras available in the system (such as chairs, tables, tablecloths, etc.). The user must be authenticated with a valid JWT token stored in the `access_token` cookie.
+
+## Response
+
+<ResponseField name="result" type="array">
+  Array of extra objects
+  
+  <ResponseField name="id_extra" type="number">
+    Unique identifier for the extra
+    
+    Example: `3`
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Name of the extra item
+    
+    Example: `"Silla Plástica"`
+  </ResponseField>
+  
+  <ResponseField name="value_add" type="number">
+    Additional cost for the extra item
+    
+    Example: `5000`
+  </ResponseField>
+  
+  <ResponseField name="quantity" type="number">
+    Available quantity of the extra item
+    
+    Example: `50`
+  </ResponseField>
+</ResponseField>
+
+## Status Codes
+
+<ResponseField name="200" type="Success">
+  List of extras retrieved successfully
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Token not sent or invalid (cookie missing or expired)
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Internal server error
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X GET https://api.example.com/extra/get \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+fetch('https://api.example.com/extra/get', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include'
+});
+```
+
+```python Python
+import requests
+
+url = 'https://api.example.com/extra/get'
+cookies = {'access_token': 'YOUR_JWT_TOKEN'}
+
+response = requests.get(url, cookies=cookies)
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success Response
+{
+  "result": [
+    {
+      "id_extra": 1,
+      "name": "Silla Plástica",
+      "value_add": 5000,
+      "quantity": 50
+    },
+    {
+      "id_extra": 2,
+      "name": "Mesa Redonda",
+      "value_add": 8000,
+      "quantity": 20
+    },
+    {
+      "id_extra": 3,
+      "name": "Mantel",
+      "value_add": 3000,
+      "quantity": 100
+    }
+  ]
+}
+```
+
+```json Error Response
+{
+  "message": "Token no enviado o inválido"
+}
+```
+
+</ResponseExample>

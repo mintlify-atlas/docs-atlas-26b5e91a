@@ -1,0 +1,98 @@
+---
+title: 'List Spaces'
+api: 'GET /space/get'
+description: 'Retrieve all available event spaces'
+---
+
+## Authentication
+
+This endpoint does not require authentication and is publicly accessible.
+
+## Response
+
+<ResponseField name="result" type="array">
+  Array of space objects
+  
+  <Expandable title="Space Object Properties">
+    <ResponseField name="id_rate" type="number">
+      Unique identifier for the space
+      
+      Example: `3`
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Name of the space
+      
+      Example: `"Salón Principal"`
+    </ResponseField>
+    
+    <ResponseField name="descrip" type="string">
+      Description of the space
+      
+      Example: `"Espacio amplio con sonido y sillas incluidas"`
+    </ResponseField>
+    
+    <ResponseField name="pax" type="number">
+      Maximum capacity (number of people)
+      
+      Example: `80`
+    </ResponseField>
+    
+    <ResponseField name="value4" type="number">
+      Price for 4-hour rental
+      
+      Example: `250000`
+    </ResponseField>
+    
+    <ResponseField name="value8" type="number">
+      Price for 8-hour rental
+      
+      Example: `400000`
+    </ResponseField>
+    
+    <ResponseField name="value_extra" type="number">
+      Price for additional hours
+      
+      Example: `60000`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X GET https://api.demet.com/space/get
+```
+
+## Example Response
+
+```json
+{
+  "result": [
+    {
+      "id_rate": 3,
+      "name": "Salón Principal",
+      "descrip": "Espacio amplio con sonido y sillas incluidas",
+      "pax": 80,
+      "value4": 250000,
+      "value8": 400000,
+      "value_extra": 60000
+    },
+    {
+      "id_rate": 5,
+      "name": "Salón VIP",
+      "descrip": "Salón exclusivo con decoración premium",
+      "pax": 50,
+      "value4": 350000,
+      "value8": 550000,
+      "value_extra": 80000
+    }
+  ]
+}
+```
+
+## Error Responses
+
+<ResponseField name="500" type="error">
+  Internal server error.
+</ResponseField>

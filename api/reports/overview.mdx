@@ -1,0 +1,43 @@
+---
+title: 'Reports Overview'
+description: 'Generate and download Excel reports with reservation data'
+---
+
+The Reports API allows you to export reservation data in Excel format. The system generates comprehensive reports with both actual and estimated (projected) values. These endpoints require authentication via cookie-based JWT tokens.
+
+## Available Endpoints
+
+<CardGroup cols={1}>
+  <Card title="Generate Report" icon="file-excel" href="/api/reports/generate">
+    Generate and download Excel report with actual and estimated data
+  </Card>
+</CardGroup>
+
+## Authentication
+
+All reports endpoints require authentication using a JWT token stored in the `access_token` cookie. The user must have appropriate role permissions to access these endpoints.
+
+## Report Structure
+
+The generated Excel file contains two sheets:
+
+### Sheet 1: Reporte (Actual Report)
+Contains actual reservation data from the `REPORT` table, ordered by date (FECHA).
+
+### Sheet 2: Reporte_Estimado (Estimated Report)
+Contains projected reservation data from the `estimated_report` table, ordered by date (FECHA).
+
+## File Format
+
+Reports are generated in `.xlsx` format (Excel 2007+) and downloaded as `report.xlsx`. The file is served with the MIME type:
+
+```
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+```
+
+## Use Cases
+
+- Export reservation data for analysis
+- Generate financial reports
+- Compare actual vs. estimated reservation metrics
+- Archive historical data

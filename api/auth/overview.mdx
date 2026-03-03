@@ -1,0 +1,79 @@
+---
+title: 'Authentication Overview'
+description: 'Authentication and employee management endpoints for DEMET Backend API'
+---
+
+The DEMET Backend API provides a complete authentication system for employee management. All authenticated endpoints use HTTP-only cookies for secure token management.
+
+## Base URL
+
+```
+https://api.demet.com/intern
+```
+
+## Authentication Flow
+
+1. **Login**: Authenticate with email and password to receive access and refresh tokens
+2. **Access**: Use the access token (stored in cookies) to access protected endpoints
+3. **Refresh**: When the access token expires, use the refresh token to obtain a new one
+4. **Logout**: Clear all authentication cookies to end the session
+
+## Token Management
+
+Tokens are automatically managed through HTTP-only cookies:
+
+- `access_token`: Short-lived token for API access
+- `refresh_token`: Long-lived token for refreshing access tokens
+
+Both cookies are configured with:
+- `httpOnly: false`
+- `secure: true` (HTTPS only in production)
+- `sameSite: none` (allows cross-site requests)
+
+## Role-Based Access Control
+
+The API supports two employee roles:
+
+- **Administrador**: Full access to all endpoints including employee management
+- **Asistente de Gerencia**: Limited access (role-specific permissions)
+
+Many endpoints require the **Administrador** role and will return 401 Unauthorized if accessed by other roles.
+
+## Available Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Register Employee" icon="user-plus" href="/api/auth/signup">
+    Create a new employee account
+  </Card>
+  <Card title="Login" icon="right-to-bracket" href="/api/auth/login">
+    Authenticate and receive tokens
+  </Card>
+  <Card title="Logout" icon="right-from-bracket" href="/api/auth/logout">
+    End the current session
+  </Card>
+  <Card title="Refresh Token" icon="arrows-rotate" href="/api/auth/refresh">
+    Obtain a new access token
+  </Card>
+  <Card title="List Employees" icon="users" href="/api/auth/employees">
+    Get all employees, update, or delete
+  </Card>
+</CardGroup>
+
+## Error Handling
+
+All endpoints follow a consistent error response format:
+
+```json
+{
+  "message": "Error description",
+  "error": "Detailed error information"
+}
+```
+
+Common HTTP status codes:
+
+- `200`: Success
+- `201`: Resource created successfully
+- `400`: Bad request or validation error
+- `401`: Unauthorized (invalid token or insufficient permissions)
+- `500`: Internal server error

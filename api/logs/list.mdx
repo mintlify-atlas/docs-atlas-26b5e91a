@@ -1,0 +1,125 @@
+---
+title: 'List Reserve Logs'
+api: 'GET /log/reserve/get'
+description: 'Retrieve all reservation logs from the system'
+---
+
+This endpoint returns all reservation log entries from the system, providing a complete audit trail of reservation activities. The logs are ordered by initialization date (INIT_DATE) to maintain chronological order. The user must be authenticated with a valid JWT token stored in the `access_token` cookie.
+
+## Response
+
+<ResponseField name="result" type="array">
+  Array of reservation log objects
+  
+  <ResponseField name="INIT_DATE" type="date">
+    Initialization date of the reservation event. Logs are ordered by this field in ascending order.
+    
+    Example: `"2024-03-15T10:30:00Z"`
+  </ResponseField>
+  
+  <ResponseField name="Additional fields" type="various">
+    The log object contains additional fields from the `log_reservation` table. These may include:
+    - Reservation identifiers
+    - User information
+    - Action types (create, update, delete, etc.)
+    - Status changes
+    - Timestamps
+    - Modified fields
+    - Other audit trail information
+  </ResponseField>
+</ResponseField>
+
+## Status Codes
+
+<ResponseField name="200" type="Success">
+  Reservation logs retrieved successfully
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Token not sent or invalid (cookie missing or expired)
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Internal server error
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X GET https://api.example.com/log/reserve/get \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+fetch('https://api.example.com/log/reserve/get', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include'
+})
+.then(response => response.json())
+.then(data => console.log(data));
+```
+
+```python Python
+import requests
+
+url = 'https://api.example.com/log/reserve/get'
+cookies = {'access_token': 'YOUR_JWT_TOKEN'}
+
+response = requests.get(url, cookies=cookies)
+logs = response.json()
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success Response
+{
+  "result": [
+    {
+      "INIT_DATE": "2024-03-15T10:30:00Z",
+      "log_id": 1,
+      "reservation_id": 123,
+      "action": "CREATE",
+      "user_id": 45,
+      "details": "New reservation created"
+    },
+    {
+      "INIT_DATE": "2024-03-15T14:20:00Z",
+      "log_id": 2,
+      "reservation_id": 123,
+      "action": "UPDATE",
+      "user_id": 45,
+      "details": "Reservation time modified"
+    },
+    {
+      "INIT_DATE": "2024-03-16T09:00:00Z",
+      "log_id": 3,
+      "reservation_id": 124,
+      "action": "CREATE",
+      "user_id": 67,
+      "details": "New reservation created"
+    }
+  ]
+}
+```
+
+```json Error Response
+{
+  "message": "Token no enviado o inválido"
+}
+```
+
+</ResponseExample>
+
+## Notes
+
+- Logs are returned in chronological order based on INIT_DATE
+- The exact fields in each log entry depend on the `log_reservation` table schema
+- Large log histories may result in significant response sizes
+- Consider implementing pagination if working with extensive log data
+- Logs provide an audit trail for compliance and debugging purposes

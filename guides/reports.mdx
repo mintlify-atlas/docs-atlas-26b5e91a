@@ -1,0 +1,707 @@
+---
+title: 'Excel Reports'
+description: 'Generate and download multi-sheet Excel reports using ExcelJS'
+icon: 'file-excel'
+---
+
+## Overview
+
+DEMET Backend provides Excel report generation capabilities using **ExcelJS**, allowing administrators to export reservation data, estimated reports, and analytics in XLSX format with multiple sheets.
+
+## Report Architecture
+
+The reporting system consists of three layers:
+
+<Steps>
+  <Step title="Data Layer">
+    SQL queries fetch data from database views
+  </Step>
+  <Step title="Service Layer">
+    ExcelJS formats data into Excel workbooks
+  </Step>
+  <Step title="Controller Layer">
+    Endpoints serve generated files for download
+  </Step>
+</Steps>
+
+## ExcelJS Integration
+
+### Installation
+
+ExcelJS is included in the project dependencies:
+
+```json package.json
+{
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  }
+}
+```
+
+### Excel Service Implementation
+
+<CodeGroup>
+```javascript service/excel.service.js
+import Exceljs from 'exceljs';
+import { errorHandler } from '../util/errorHandler.js';
+
+export const exportExcel = async (sheets) => {
+    try {
+        // Create new workbook
+        const workBook = new Exceljs.Workbook();
+        
+        /*
+        Iterate through each sheet
+        sheets format:
+        [
+            { data: [...], sheetName: "Sheet1" },
+            { data: [...], sheetName: "Sheet2" }
+        ]
+        */
+        for (const { data, sheetName } of sheets) {
+            const workSheet = workBook.addWorksheet(sheetName);
+            
+            // Validate if there is data
+            if (!data || data.length === 0) {
+                workSheet.addRow(["No hay datos"]);
+                continue;
+            }
+
+            // Add headers from first row keys
+            workSheet.addRow(Object.keys(data[0]));
+
+            // Add data rows
+            data.forEach(row => {
+                workSheet.addRow(Object.values(row));
+            });
+        }
+
+        // Write to buffer and return as XLSX format
+        return await workBook.xlsx.writeBuffer();
+
+    } catch (error) {
+        errorHandler(error);
+    }
+};
+```
+</CodeGroup>
+
+<Note>
+  The `exportExcel` function accepts an array of sheet objects, each containing `data` (array of objects) and `sheetName` (string).
+</Note>
+
+## Report Service
+
+The report service queries database views for report data:
+
+<CodeGroup>
+```javascript service/report.service.js
+import pool from "../lib/db.js";
+import { errorHandler } from "../util/errorHandler.js";
+
+// Get report with actual values (completed reservations)
+export const reportGet = async() => {
+    try {
+        const result = await pool.query(
+            "SELECT * FROM REPORT ORDER BY FECHA;"
+        );
+        return result.rows;
+    } catch (error) {
+        errorHandler(error);
+    }
+}
+
+// Get report with projected values (pending requests)
+export const estimatedReportGet = async() => {
+    try {
+        const result = await pool.query(
+            "SELECT * FROM estimated_report ORDER BY FECHA;"
+        );
+        return result.rows;
+    } catch (error) {
+        errorHandler(error);
+    }
+}
+```
+</CodeGroup>
+
+### Database Views
+
+The reports pull data from PostgreSQL views:
+
+<CodeGroup>
+```sql REPORT View
+CREATE OR REPLACE VIEW REPORT AS
+SELECT 
+    r.id_reservation,
+    r.name,
+    r.email,
+    r.init_date AS fecha,
+    r.end_date,
+    r.pax,
+    r.total_value,
+    s.name AS espacio,
+    rt.name AS tarifa,
+    r.status
+FROM RESERVATION r
+JOIN RATE rt ON r.fk_rate = rt.id_rate
+JOIN SPACE s ON rt.idSpace = s.id_space
+WHERE r.status = 'FINALIZADO'
+ORDER BY r.init_date;
+```
+
+```sql estimated_report View
+CREATE OR REPLACE VIEW estimated_report AS
+SELECT 
+    req.id_request,
+    req.name,
+    req.email,
+    req.init_date AS fecha,
+    req.end_date,
+    req.pax,
+    calculate_Value(req.end_date, req.init_date, req.fk_rate) AS total_estimado,
+    s.name AS espacio,
+    rt.name AS tarifa,
+    req.status
+FROM REQUEST req
+JOIN RATE rt ON req.fk_rate = rt.id_rate
+JOIN SPACE s ON rt.idSpace = s.id_space
+WHERE req.status IN ('PENDIENTE', 'EN PROGRESO')
+ORDER BY req.init_date;
+```
+</CodeGroup>
+
+## Report Controller
+
+The controller orchestrates data fetching and Excel generation:
+
+<CodeGroup>
+```javascript controller/report.controller.js
+import { estimatedReportGet, reportGet } from "../service/report.service.js";
+import { exportExcel } from "../service/excel.service.js";
+
+export const reportController = {
+    export: async(req, res) => {
+        try {
+            // Fetch both report types from database
+            const result = await reportGet();
+            const estimatedResult = await estimatedReportGet();
+            
+            // Generate Excel file with multiple sheets
+            const reportExcel = await exportExcel([
+                { data: result, sheetName: "Reporte" },
+                { data: estimatedResult, sheetName: "Reporte_Estimado" }
+            ]);
+            
+            // Set response headers for XLSX download
+            res.setHeader(
+                "Content-Type",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            );
+            
+            res.setHeader(
+                "Content-Disposition",
+                "attachment; filename=report.xlsx"
+            );
+            
+            // Convert ArrayBuffer to Buffer and send
+            res.send(Buffer.from(reportExcel));
+
+        } catch (error) {
+            const status = error.statusCode || 500;
+            return res.status(status).json({ message: error.message });
+        }
+    }
+}
+```
+</CodeGroup>
+
+## API Endpoint
+
+### Export Reports Endpoint
+
+<CodeGroup>
+```javascript routes/report.routes.js
+import Express from 'express';
+import { verifyRol } from '../middleware/rolAccess.js';
+import { reportController } from "../controller/report.controller.js";
+
+const router = Express.Router();
+
+/**
+ * @swagger
+ * /report/export:
+ *   get:
+ *     summary: Export reports in Excel format
+ *     tags: [Report]
+ *     description: >
+ *       Generates and downloads an Excel file containing two reports:
+ *       **Reporte** (completed reservations) and **Reporte Estimado** (pending requests).
+ *       Both datasets are exported as separate sheets in a single .xlsx file.
+ *       Requires JWT authentication via cookie.
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Excel file generated and sent successfully.
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       401:
+ *         description: Token not sent or invalid.
+ *       500:
+ *         description: Internal server error.
+ */
+router.get('/export', verifyRol, reportController.export);
+
+export default router;
+```
+</CodeGroup>
+
+### Usage Example
+
+<CodeGroup>
+```bash cURL
+curl -X GET http://localhost:3002/report/export \
+  -H "Cookie: accessToken=your-jwt-token" \
+  -o report.xlsx
+```
+
+```javascript JavaScript (Fetch)
+fetch('http://localhost:3002/report/export', {
+    method: 'GET',
+    credentials: 'include',  // Include cookies
+    headers: {
+        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    }
+})
+.then(response => response.blob())
+.then(blob => {
+    // Create download link
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'report.xlsx';
+    a.click();
+})
+.catch(error => console.error('Download failed:', error));
+```
+
+```javascript Axios
+import axios from 'axios';
+
+axios({
+    url: 'http://localhost:3002/report/export',
+    method: 'GET',
+    responseType: 'blob',  // Important
+    withCredentials: true  // Include cookies
+})
+.then(response => {
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'report.xlsx');
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+})
+.catch(error => console.error('Error:', error));
+```
+</CodeGroup>
+
+## Generated Excel Structure
+
+### Sheet 1: Reporte (Completed Reservations)
+
+| Column | Description | Type |
+|--------|-------------|------|
+| id_reservation | Reservation ID | VARCHAR(10) |
+| name | Customer name | VARCHAR(255) |
+| email | Customer email | VARCHAR(255) |
+| fecha | Start date | DATE |
+| end_date | End date | DATE |
+| pax | Number of people | INTEGER |
+| total_value | Total amount paid | DECIMAL(10,2) |
+| espacio | Space/room name | VARCHAR(255) |
+| tarifa | Rate type (Partner/Non-partner) | VARCHAR(255) |
+| status | Status (always "FINALIZADO") | VARCHAR(20) |
+
+### Sheet 2: Reporte_Estimado (Pending Requests)
+
+| Column | Description | Type |
+|--------|-------------|------|
+| id_request | Request ID | INTEGER |
+| name | Customer name | VARCHAR(255) |
+| email | Customer email | VARCHAR(255) |
+| fecha | Requested start date | DATE |
+| end_date | Requested end date | DATE |
+| pax | Number of people | INTEGER |
+| total_estimado | Estimated total value | DECIMAL(10,2) |
+| espacio | Space/room name | VARCHAR(255) |
+| tarifa | Rate type | VARCHAR(255) |
+| status | Status (PENDIENTE/EN PROGRESO) | VARCHAR(20) |
+
+## Advanced Features
+
+### Custom Styling
+
+Add formatting to Excel cells:
+
+<CodeGroup>
+```javascript Advanced Excel Formatting
+import Exceljs from 'exceljs';
+
+export const exportExcelStyled = async (sheets) => {
+    const workBook = new Exceljs.Workbook();
+    
+    for (const { data, sheetName } of sheets) {
+        const workSheet = workBook.addWorksheet(sheetName);
+        
+        if (!data || data.length === 0) {
+            workSheet.addRow(["No hay datos"]);
+            continue;
+        }
+
+        // Add headers with styling
+        const headerRow = workSheet.addRow(Object.keys(data[0]));
+        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        headerRow.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF4472C4' }
+        };
+        headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+        // Add data rows
+        data.forEach(row => {
+            const dataRow = workSheet.addRow(Object.values(row));
+            dataRow.alignment = { vertical: 'middle' };
+        });
+
+        // Auto-fit columns
+        workSheet.columns.forEach(column => {
+            let maxLength = 0;
+            column.eachCell({ includeEmpty: true }, cell => {
+                const cellLength = cell.value ? cell.value.toString().length : 10;
+                if (cellLength > maxLength) {
+                    maxLength = cellLength;
+                }
+            });
+            column.width = maxLength < 10 ? 10 : maxLength + 2;
+        });
+
+        // Freeze header row
+        workSheet.views = [
+            { state: 'frozen', xSplit: 0, ySplit: 1 }
+        ];
+    }
+
+    return await workBook.xlsx.writeBuffer();
+};
+```
+</CodeGroup>
+
+### Add Charts
+
+Include charts in Excel reports:
+
+```javascript
+// Add a chart to worksheet
+const chart = workSheet.addChart({
+    type: 'bar',
+    position: 'E2',
+    title: { text: 'Reservations by Space' },
+    categories: ['Space A', 'Space B', 'Space C'],
+    values: [10, 25, 15]
+});
+```
+
+### Multiple Workbooks
+
+Generate different report types:
+
+<CodeGroup>
+```javascript Custom Report Service
+export const generateCustomReport = async(startDate, endDate, spaceId) => {
+    const query = `
+        SELECT 
+            r.init_date,
+            r.end_date,
+            r.total_value,
+            s.name AS space,
+            COUNT(*) AS reservations
+        FROM RESERVATION r
+        JOIN RATE rt ON r.fk_rate = rt.id_rate
+        JOIN SPACE s ON rt.idSpace = s.id_space
+        WHERE r.init_date BETWEEN $1 AND $2
+        ${spaceId ? 'AND s.id_space = $3' : ''}
+        GROUP BY r.init_date, r.end_date, r.total_value, s.name
+        ORDER BY r.init_date;
+    `;
+    
+    const params = spaceId 
+        ? [startDate, endDate, spaceId] 
+        : [startDate, endDate];
+    
+    const result = await pool.query(query, params);
+    return result.rows;
+};
+```
+</CodeGroup>
+
+### Stream Large Reports
+
+For very large datasets, use streaming:
+
+```javascript
+export const exportExcelStream = async (sheets, res) => {
+    const workBook = new Exceljs.stream.xlsx.WorkbookWriter({
+        stream: res
+    });
+    
+    for (const { data, sheetName } of sheets) {
+        const workSheet = workBook.addWorksheet(sheetName);
+        
+        // Add headers
+        workSheet.addRow(Object.keys(data[0])).commit();
+        
+        // Stream data rows
+        for (const row of data) {
+            workSheet.addRow(Object.values(row)).commit();
+        }
+    }
+    
+    await workBook.commit();
+};
+```
+
+## Authentication & Authorization
+
+Reports require authentication via JWT:
+
+<CodeGroup>
+```javascript middleware/rolAccess.js
+import jwt from 'jsonwebtoken';
+
+export const verifyRol = async (req, res, next) => {
+    try {
+        const token = req.cookies.accessToken;
+        
+        if (!token) {
+            return res.status(401).json({ 
+                message: 'Token no proporcionado' 
+            });
+        }
+        
+        const decoded = jwt.verify(token, process.env.ACCESS_SECRET);
+        
+        // Check user role
+        if (!['Administrador', 'Asistente de Gerencia'].includes(decoded.rol)) {
+            return res.status(403).json({ 
+                message: 'Acceso denegado' 
+            });
+        }
+        
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(401).json({ 
+            message: 'Token inválido' 
+        });
+    }
+};
+```
+</CodeGroup>
+
+<Warning>
+  Only authenticated users with "Administrador" or "Asistente de Gerencia" roles can download reports.
+</Warning>
+
+## Performance Considerations
+
+<CardGroup cols={2}>
+  <Card title="Database Indexing" icon="database">
+    Add indexes on date columns for faster report queries
+  </Card>
+  <Card title="Pagination" icon="list">
+    For large datasets, implement pagination or date range filters
+  </Card>
+  <Card title="Caching" icon="memory">
+    Cache frequently accessed reports with Redis
+  </Card>
+  <Card title="Async Processing" icon="clock">
+    Generate large reports asynchronously with job queues
+  </Card>
+</CardGroup>
+
+### Optimization Example
+
+```javascript
+// Add date range filter
+export const reportGetFiltered = async(startDate, endDate) => {
+    const result = await pool.query(
+        `SELECT * FROM REPORT 
+         WHERE fecha BETWEEN $1 AND $2 
+         ORDER BY fecha;`,
+        [startDate, endDate]
+    );
+    return result.rows;
+};
+```
+
+## Error Handling
+
+<CodeGroup>
+```javascript Robust Error Handling
+export const reportController = {
+    export: async(req, res) => {
+        try {
+            const result = await reportGet();
+            const estimatedResult = await estimatedReportGet();
+            
+            // Check if data exists
+            if (!result && !estimatedResult) {
+                return res.status(404).json({ 
+                    message: 'No data available for reports' 
+                });
+            }
+            
+            const reportExcel = await exportExcel([
+                { data: result || [], sheetName: "Reporte" },
+                { data: estimatedResult || [], sheetName: "Reporte_Estimado" }
+            ]);
+            
+            if (!reportExcel) {
+                throw new Error('Failed to generate Excel file');
+            }
+            
+            res.setHeader(
+                "Content-Type",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            );
+            
+            res.setHeader(
+                "Content-Disposition",
+                `attachment; filename=report-${Date.now()}.xlsx`
+            );
+            
+            res.send(Buffer.from(reportExcel));
+
+        } catch (error) {
+            console.error('Report generation error:', error);
+            
+            const status = error.statusCode || 500;
+            return res.status(status).json({ 
+                message: error.message || 'Internal server error',
+                error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            });
+        }
+    }
+}
+```
+</CodeGroup>
+
+## Testing Reports
+
+<CodeGroup>
+```javascript test-report.js
+import { exportExcel } from './service/excel.service.js';
+import fs from 'fs';
+
+async function testReportGeneration() {
+    // Mock data
+    const mockData = [
+        {
+            id_reservation: 'RES001',
+            name: 'John Doe',
+            email: 'john@example.com',
+            fecha: '2025-03-15',
+            pax: 10,
+            total_value: 500000,
+            espacio: 'Salon Principal',
+            tarifa: 'No Socio'
+        },
+        {
+            id_reservation: 'RES002',
+            name: 'Jane Smith',
+            email: 'jane@example.com',
+            fecha: '2025-03-20',
+            pax: 25,
+            total_value: 750000,
+            espacio: 'Salon VIP',
+            tarifa: 'Socio'
+        }
+    ];
+
+    try {
+        const buffer = await exportExcel([
+            { data: mockData, sheetName: "Test Report" }
+        ]);
+        
+        fs.writeFileSync('test-report.xlsx', buffer);
+        console.log('✓ Test report generated: test-report.xlsx');
+    } catch (error) {
+        console.error('✗ Test failed:', error);
+    }
+}
+
+testReportGeneration();
+```
+</CodeGroup>
+
+Run the test:
+
+```bash
+node test-report.js
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Empty Excel file">
+    - Check database views return data
+    - Verify query results are not null
+    - Ensure proper error handling
+    - Check `data` is an array of objects
+  </Accordion>
+
+  <Accordion title="Corrupted file download">
+    - Use `Buffer.from()` when sending
+    - Set correct Content-Type header
+    - Don't modify response after sending buffer
+    - Check ExcelJS version compatibility
+  </Accordion>
+
+  <Accordion title="Slow report generation">
+    - Add database indexes
+    - Limit data with date ranges
+    - Use streaming for large datasets
+    - Implement caching
+  </Accordion>
+
+  <Accordion title="Memory issues with large reports">
+    - Use `WorkbookWriter` for streaming
+    - Implement pagination
+    - Increase Node.js heap size: `node --max-old-space-size=4096`
+    - Generate reports asynchronously
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Email Notifications" icon="envelope" href="/guides/email-notifications">
+    Send reports via email attachments
+  </Card>
+  <Card title="Database" icon="database" href="/guides/database">
+    Optimize queries for report generation
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference/reports">
+    Explore report endpoints
+  </Card>
+  <Card title="Authentication" icon="lock" href="/api-reference/auth">
+    Secure report access with JWT
+  </Card>
+</CardGroup>

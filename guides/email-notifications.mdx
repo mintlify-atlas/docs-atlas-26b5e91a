@@ -1,0 +1,652 @@
+---
+title: 'Email Notifications'
+description: 'Configure and send email notifications using Nodemailer and Gmail'
+icon: 'envelope'
+---
+
+## Overview
+
+DEMET Backend uses **Nodemailer** with Gmail SMTP to send automated email notifications for reservation requests, status updates, and administrative alerts.
+
+## Email Service Architecture
+
+The email system consists of three main components:
+
+<Steps>
+  <Step title="Transporter Creation">
+    Establishes connection with Gmail SMTP server
+  </Step>
+  <Step title="Mail Preparation">
+    Formats email with HTML templates and attachments
+  </Step>
+  <Step title="Email Sending">
+    Sends the prepared email to recipients
+  </Step>
+</Steps>
+
+## Email Service Implementation
+
+The core email service is located in `service/email.service.js`:
+
+<CodeGroup>
+```javascript service/email.service.js
+import nodemailer from "nodemailer";
+import dotenv from 'dotenv';
+import path from "path";
+
+dotenv.config();
+
+// Service to create Gmail transporter
+export const transporterGmail = async() => {
+    const transport = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+            user: process.env.GOOGLE_USER,
+            pass: process.env.GOOGLE_PWD
+        }
+    });
+    return transport;
+}
+
+// Service to prepare email with template
+export const mailprepare = async(recipient, tittle, body) => {
+    // Get logo image path
+    const iconPath = path.resolve(
+        process.cwd(), 
+        "util", 
+        "templates", 
+        "icons", 
+        "G.png"
+    );
+
+    // Prepare email options
+    const mailOptions = {
+        from: `"Club del Meta <${process.env.GOOGLE_USER}>"`,
+        to: recipient,
+        subject: tittle,
+        html: body,
+        attachments: [
+            {
+                filename: "G.png",
+                path: iconPath, 
+                cid: "logoG"  // Content ID for inline images
+            }
+        ]
+    }
+    return mailOptions;
+}
+
+// Service to send email
+export const sendmail = async(transporter, mail) => {
+    return await transporter.sendMail(mail);
+}
+```
+</CodeGroup>
+
+## Configuration
+
+### Gmail Setup
+
+<Warning>
+  You must use a Gmail App Password, not your regular Gmail password.
+</Warning>
+
+<Steps>
+  <Step title="Enable 2-Factor Authentication">
+    Go to [Google Account Security](https://myaccount.google.com/security) and enable 2FA
+  </Step>
+
+  <Step title="Generate App Password">
+    1. Visit [App Passwords](https://myaccount.google.com/apppasswords)
+    2. Select app: **Mail**
+    3. Select device: **Other (Custom name)**
+    4. Enter name: **DEMET Backend**
+    5. Click **Generate**
+    6. Copy the 16-character password
+  </Step>
+
+  <Step title="Configure Environment Variables">
+    Add to your `.env` file:
+    ```env
+    GOOGLE_USER=your-email@gmail.com
+    GOOGLE_PWD=abcdefghijklmnop  # 16-char app password
+    EMAIL_ADMIN=admin@example.com
+    ```
+  </Step>
+</Steps>
+
+### Alternative SMTP Providers
+
+You can also use other SMTP providers:
+
+<CodeGroup>
+```javascript Gmail
+const transport = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.GOOGLE_USER,
+        pass: process.env.GOOGLE_PWD
+    }
+});
+```
+
+```javascript Custom SMTP
+const transport = nodemailer.createTransport({
+    host: "smtp.example.com",
+    port: 587,
+    secure: false, // true for 465, false for other ports
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASSWORD
+    }
+});
+```
+
+```javascript SendGrid
+const transport = nodemailer.createTransport({
+    host: "smtp.sendgrid.net",
+    port: 587,
+    auth: {
+        user: "apikey",
+        pass: process.env.SENDGRID_API_KEY
+    }
+});
+```
+
+```javascript AWS SES
+const transport = nodemailer.createTransport({
+    host: "email-smtp.us-east-1.amazonaws.com",
+    port: 587,
+    auth: {
+        user: process.env.AWS_SES_USER,
+        pass: process.env.AWS_SES_PASSWORD
+    }
+});
+```
+</CodeGroup>
+
+## Email Templates
+
+The system includes three main email templates:
+
+### 1. Registration Request Template
+
+Sent to customers when they submit a reservation request.
+
+<CodeGroup>
+```javascript util/templates/registerRequest.template.js
+export const registerRequestTemplate = async (
+    nameClient, 
+    pax, 
+    initDate, 
+    endDate, 
+    value, 
+    nameSpace, 
+    nameRate
+) => {
+    const deposit = (value / 2).toLocaleString("es-CO");
+
+    // WhatsApp message
+    const whatsappMessage = encodeURIComponent(
+        `Buen día, mi nombre es ${nameClient}. He realizado una solicitud ` +
+        `de reserva del espacio ${nameSpace}, programada para el periodo ` +
+        `comprendido entre ${initDate} y ${endDate}. Agradezco si podemos ` +
+        `establecer comunicación para revisar y coordinar los detalles ` +
+        `correspondientes. Muchas gracias.`
+    );
+
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Solicitud Recibida</title>
+    </head>
+    <body style="margin:0; padding:0; background-color:#eeeade; font-family:Arial, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="padding: 30px 0;">
+            <tr>
+                <td align="center">
+                    <table width="600" cellpadding="0" cellspacing="0"
+                           style="background:#ffffff; border-radius:12px; overflow:hidden;">
+                        
+                        <!-- HEADER -->
+                        <tr>
+                            <td style="background:#223b80; padding:25px;">
+                                <img src="cid:logoG" alt="Club El Meta" width="90" 
+                                     style="display:block; margin: 0 auto;">
+                                <div align="center" style="color:white; font-size:25px; font-weight:bold;">
+                                    Solicitud Recibida
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- BODY -->
+                        <tr>
+                            <td style="padding:30px; color:#000000; font-size:15px; line-height:1.8;">
+                                <p style="margin:0 0 15px;">Hola <strong>${nameClient}</strong>,</p>
+                                
+                                <p style="margin:0 0 15px;">
+                                    Hemos recibido correctamente tu <strong>solicitud de reserva</strong>.
+                                    Nuestro equipo la revisará y pronto te enviaremos la confirmación.
+                                </p>
+
+                                <!-- RESERVATION SUMMARY -->
+                                <table width="100%" cellpadding="0" cellspacing="0" 
+                                       style="background:#f5f5f5; padding:15px; border-radius:8px; margin:25px 0;">
+                                    <tr>
+                                        <td style="font-size:14px; padding:6px 0;"><strong>Cliente:</strong></td>
+                                        <td style="font-size:14px; padding:6px 0;">${nameClient}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-size:14px; padding:6px 0;"><strong>Espacio solicitado:</strong></td>
+                                        <td style="font-size:14px; padding:6px 0;">${nameSpace}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-size:14px; padding:6px 0;"><strong>Tipo de Organización:</strong></td>
+                                        <td style="font-size:14px; padding:6px 0;">${nameRate}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-size:14px; padding:6px 0;"><strong>Número de personas:</strong></td>
+                                        <td style="font-size:14px; padding:6px 0;">${pax}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-size:14px; padding:6px 0;"><strong>Fecha reservada:</strong></td>
+                                        <td style="font-size:14px; padding:6px 0;">Desde: ${initDate} - Hasta: ${endDate}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-size:14px; padding:6px 0;"><strong>Valor estimado:</strong></td>
+                                        <td style="font-size:14px; padding:6px 0;">$${value}</td>
+                                    </tr>
+                                </table>
+
+                                <!-- PAYMENT INFO -->
+                                <div style="background:#fff5d6; border-left:6px solid #f0b429; padding:15px; border-radius:6px; margin-bottom:25px;">
+                                    <p style="margin:0; font-size:15px;">
+                                        <strong>Importante:</strong> Para continuar con tu proceso de reserva, 
+                                        debes realizar un <strong>abono del 50%</strong> correspondiente a:
+                                    </p>
+                                    <p style="margin:10px 0 0; font-size:18px; font-weight:bold; color:#c47a00;">
+                                        $${deposit} COP
+                                    </p>
+                                    <p style="margin:10px 0 0; font-size:15px;">
+                                        Realiza la consignación en nuestro <strong>Nequi: 3103330880</strong> 
+                                        a nombre de <strong>Club El Meta</strong>.
+                                    </p>
+                                </div>
+
+                                <!-- WHATSAPP BUTTON -->
+                                <div style="text-align:center; margin:30px 0;">
+                                    <a href="https://wa.me/573103330880?text=${whatsappMessage}" target="_blank"
+                                       style="background-color:#0cb64a; color:white; padding:14px 25px; 
+                                              border-radius:6px; text-decoration:none; font-size:16px; 
+                                              font-weight:bold; display:inline-block;">
+                                        Contactar al Administrador por WhatsApp
+                                    </a>
+                                </div>
+
+                                <p style="margin-top:30px; color:#000000; font-weight:bold;">
+                                    Saludos,<br>Equipo de Reservas – Club El Meta
+                                </p>
+                            </td>
+                        </tr>
+
+                        <!-- FOOTER -->
+                        <tr>
+                            <td align="center" style="background:#ffffff; color:#7a7979; padding:12px; font-size:12px;">
+                                © 2025 Club El Meta • Todos los derechos reservados
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    `;
+};
+```
+</CodeGroup>
+
+<Note>
+  The template uses inline CSS for maximum email client compatibility and includes a WhatsApp contact button.
+</Note>
+
+### 2. Admin Notification Template
+
+Sent to administrators when a new reservation request is submitted.
+
+```javascript
+// Similar structure to registerRequest but focused on admin information
+// Located in: util/templates/adminNotifyRequest.template.js
+```
+
+### 3. Status Update Template
+
+Sent when a reservation request status changes.
+
+```javascript
+// Notifies customers about request status changes
+// Located in: util/templates/updateStatus.template.js
+```
+
+## Use Cases
+
+### 1. New Reservation Request
+
+When a customer submits a reservation request:
+
+<CodeGroup>
+```javascript controller/request.controller.js
+import { transporterGmail, mailprepare, sendmail } from "../service/email.service.js";
+import { registerRequestTemplate } from "../util/templates/registerRequest.template.js";
+import { adminNotifyRequestTemplate } from "../util/templates/adminNotifyRequest.template.js";
+
+export const requestController = {
+    register: async(req, res) => {
+        try {
+            const {
+                v_name, v_email, v_phone_number, v_pax,
+                v_init_date, v_end_date, v_fk_rate, v_value
+            } = req.body;
+
+            // Register request in database
+            await requestRegister(/* ... */);
+
+            // Get space and rate names
+            const v_nameSpace = await spaceNameByRate(v_fk_rate);
+            const v_nameRate = await nameRateById(v_fk_rate);
+            const v_emailAdmin = await getAdminEmployee();
+
+            // Create transporter
+            const transporter = await transporterGmail();
+
+            // Prepare customer email
+            const customerMail = await mailprepare(
+                v_email,
+                'Solicitud Enviada Con Éxito',
+                await registerRequestTemplate(
+                    v_name, v_pax, v_init_date, v_end_date,
+                    v_value, v_nameSpace.name, v_nameRate.tarifa
+                )
+            );
+
+            // Prepare admin email
+            const adminMail = await mailprepare(
+                v_emailAdmin.email,
+                'Nueva Solicitud',
+                await adminNotifyRequestTemplate(
+                    v_name, v_phone_number, v_pax, v_init_date,
+                    v_end_date, v_value, v_nameSpace.name, v_nameRate.tarifa
+                )
+            );
+
+            // Send emails
+            const customerResult = await sendmail(transporter, customerMail);
+            const adminResult = await sendmail(transporter, adminMail);
+
+            return res.status(200).json({
+                message: 'Request Registrada Exitosamente',
+                info: customerResult.accepted,
+                infoAdmin: adminResult.accepted
+            });
+        } catch (error) {
+            const status = error.statusCode || 500;
+            return res.status(status).json({ message: error.message });
+        }
+    }
+}
+```
+</CodeGroup>
+
+### 2. Status Update Notification
+
+<CodeGroup>
+```javascript controller/request.controller.js
+import { updateStatusTemplate } from "../util/templates/updateStatus.template.js";
+
+export const requestController = {
+    update: async(req, res) => {
+        try {
+            const { v_id_request, v_email } = req.body;
+
+            // Update status in database
+            await updateStatus(v_id_request);
+
+            // Send notification email
+            const transporter = await transporterGmail();
+            const mail = await mailprepare(
+                v_email,
+                'Solicitud En Proceso',
+                updateStatusTemplate
+            );
+            const result = await sendmail(transporter, mail);
+
+            return res.status(200).json({
+                message: 'Status Actualizado',
+                info: result.accepted
+            });
+        } catch (error) {
+            const status = error.statusCode || 500;
+            return res.status(status).json({ message: error.message });
+        }
+    }
+}
+```
+</CodeGroup>
+
+## Email Template Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Inline CSS" icon="code">
+    Always use inline styles for maximum email client compatibility
+  </Card>
+  <Card title="Tables for Layout" icon="table">
+    Use tables instead of divs for layout structure
+  </Card>
+  <Card title="Alt Text" icon="image">
+    Include alt text for all images
+  </Card>
+  <Card title="Test Everywhere" icon="vials">
+    Test emails across Gmail, Outlook, Apple Mail, etc.
+  </Card>
+</CardGroup>
+
+### Inline Images
+
+Use Content ID (CID) for embedded images:
+
+```javascript
+attachments: [
+    {
+        filename: "logo.png",
+        path: "/path/to/logo.png",
+        cid: "logoG"  // Content ID
+    }
+]
+```
+
+Reference in HTML:
+
+```html
+<img src="cid:logoG" alt="Logo" width="90" />
+```
+
+## Error Handling
+
+<CodeGroup>
+```javascript Graceful Error Handling
+try {
+    const transporter = await transporterGmail();
+    const mail = await mailprepare(recipient, subject, body);
+    const result = await sendmail(transporter, mail);
+    
+    console.log('Email sent:', result.accepted);
+    return result;
+} catch (error) {
+    console.error('Email sending failed:', error);
+    
+    // Log but don't crash the application
+    if (error.code === 'EAUTH') {
+        console.error('Authentication failed. Check GOOGLE_USER and GOOGLE_PWD');
+    } else if (error.code === 'ECONNECTION') {
+        console.error('Connection failed. Check internet connection');
+    }
+    
+    throw error;
+}
+```
+</CodeGroup>
+
+## Testing Emails
+
+### Local Development
+
+For development, use a test service like [Mailtrap](https://mailtrap.io/):
+
+```javascript
+const transport = nodemailer.createTransport({
+    host: "smtp.mailtrap.io",
+    port: 2525,
+    auth: {
+        user: process.env.MAILTRAP_USER,
+        pass: process.env.MAILTRAP_PASSWORD
+    }
+});
+```
+
+### Test Email Function
+
+<CodeGroup>
+```javascript test-email.js
+import { transporterGmail, mailprepare, sendmail } from './service/email.service.js';
+
+async function testEmail() {
+    try {
+        const transporter = await transporterGmail();
+        
+        const testMail = await mailprepare(
+            'test@example.com',
+            'Test Email',
+            '<h1>Hello World</h1><p>This is a test email.</p>'
+        );
+        
+        const result = await sendmail(transporter, testMail);
+        
+        console.log('✓ Email sent successfully');
+        console.log('Recipients:', result.accepted);
+        console.log('Message ID:', result.messageId);
+    } catch (error) {
+        console.error('✗ Email failed:', error.message);
+    }
+}
+
+testEmail();
+```
+</CodeGroup>
+
+Run the test:
+
+```bash
+node test-email.js
+```
+
+## Performance Considerations
+
+<Warning>
+  Email sending is slow. Always send emails asynchronously and don't block API responses.
+</Warning>
+
+### Async Email Sending
+
+```javascript
+// Don't wait for email to complete
+sendmail(transporter, mail)
+    .then(result => console.log('Email sent:', result.messageId))
+    .catch(error => console.error('Email failed:', error));
+
+// Return response immediately
+return res.status(200).json({ message: 'Request registered' });
+```
+
+### Queue System (Advanced)
+
+For high-volume applications, use a queue:
+
+```javascript
+import Bull from 'bull';
+
+const emailQueue = new Bull('emails', {
+    redis: { host: 'localhost', port: 6379 }
+});
+
+// Add email to queue
+emailQueue.add({
+    to: 'customer@example.com',
+    subject: 'Reservation Confirmed',
+    template: 'confirmation',
+    data: { name, date, space }
+});
+
+// Process queue
+emailQueue.process(async (job) => {
+    const { to, subject, template, data } = job.data;
+    // Send email
+});
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Authentication failed (EAUTH)">
+    - Use App Password, not regular Gmail password
+    - Enable 2-Factor Authentication first
+    - Check `GOOGLE_USER` and `GOOGLE_PWD` in `.env`
+    - Remove spaces from App Password
+  </Accordion>
+
+  <Accordion title="Connection timeout (ECONNECTION)">
+    - Check internet connection
+    - Verify firewall allows SMTP (port 587)
+    - Try different Gmail SMTP port (465)
+    - Check if Gmail is blocking the connection
+  </Accordion>
+
+  <Accordion title="Emails go to spam">
+    - Set up SPF, DKIM, and DMARC records
+    - Use a verified domain email
+    - Avoid spam trigger words
+    - Include unsubscribe link
+    - Authenticate with DKIM
+  </Accordion>
+
+  <Accordion title="Images not displaying">
+    - Use absolute URLs for images
+    - Or use CID attachments
+    - Include alt text
+    - Test in multiple email clients
+  </Accordion>
+
+  <Accordion title="Template rendering issues">
+    - Use inline CSS only
+    - Use tables for layout
+    - Test in [Litmus](https://litmus.com/) or [Email on Acid](https://www.emailonacid.com/)
+    - Avoid modern CSS (flexbox, grid)
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Reports" icon="file-excel" href="/guides/reports">
+    Generate Excel reports for email attachments
+  </Card>
+  <Card title="Configuration" icon="gear" href="/guides/configuration">
+    Configure email environment variables
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference">
+    See endpoints that trigger emails
+  </Card>
+  <Card title="Database" icon="database" href="/guides/database">
+    Store email logs in database
+  </Card>
+</CardGroup>

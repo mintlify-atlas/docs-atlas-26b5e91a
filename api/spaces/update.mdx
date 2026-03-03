@@ -1,0 +1,114 @@
+---
+title: 'Update Space'
+api: 'PUT /space/update'
+description: 'Update information for an existing event space'
+---
+
+## Authentication
+
+This endpoint requires authentication. The JWT token must be provided in the `access_token` cookie.
+
+## Request Body
+
+<ParamField body="v_id_rate" type="number" required>
+  ID of the space to update (associated rate ID)
+  
+  Example: `3`
+</ParamField>
+
+<ParamField body="v_name" type="string" required>
+  Updated name of the space
+  
+  Example: `"Salón Principal Remodelado"`
+</ParamField>
+
+<ParamField body="v_descrip" type="string" required>
+  Updated description of the space
+  
+  Example: `"Espacio actualizado con nueva iluminación y mobiliario"`
+</ParamField>
+
+<ParamField body="v_pax" type="number" required>
+  Updated maximum capacity (number of people)
+  
+  Example: `100`
+</ParamField>
+
+<ParamField body="v_value4" type="number" required>
+  Updated price for 4-hour rental period
+  
+  Example: `300000`
+</ParamField>
+
+<ParamField body="v_value8" type="number" required>
+  Updated price for 8-hour rental period
+  
+  Example: `480000`
+</ParamField>
+
+<ParamField body="v_value_extra" type="number" required>
+  Updated price for each additional hour
+  
+  Example: `70000`
+</ParamField>
+
+<ParamField body="v_url_img" type="array" required>
+  Updated array of image URLs (minimum 1 image required)
+  
+  Example: `["https://mi-servidor.com/uploads/salon1.jpg", "https://mi-servidor.com/uploads/salon2.jpg"]`
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message confirming space update
+  
+  Example: `"Update Exitoso"`
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X PUT https://api.demet.com/space/update \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN" \
+  -d '{
+    "v_id_rate": 3,
+    "v_name": "Salón Principal Remodelado",
+    "v_descrip": "Espacio actualizado con nueva iluminación y mobiliario",
+    "v_pax": 100,
+    "v_value4": 300000,
+    "v_value8": 480000,
+    "v_value_extra": 70000,
+    "v_url_img": [
+      "https://mi-servidor.com/uploads/salon1.jpg",
+      "https://mi-servidor.com/uploads/salon2.jpg"
+    ]
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "message": "Update Exitoso"
+}
+```
+
+## Error Responses
+
+<ResponseField name="400" type="error">
+  Validation error or duplicate data detected.
+</ResponseField>
+
+<ResponseField name="401" type="error">
+  Authentication error. Token not sent, invalid, or expired.
+</ResponseField>
+
+<ResponseField name="404" type="error">
+  Space not found with the provided ID.
+</ResponseField>
+
+<ResponseField name="500" type="error">
+  Internal server error.
+</ResponseField>

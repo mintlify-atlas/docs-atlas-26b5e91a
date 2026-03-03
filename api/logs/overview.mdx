@@ -1,0 +1,37 @@
+---
+title: 'Reserve Logs Overview'
+description: 'Access reservation history and audit logs'
+---
+
+The Reserve Logs API provides access to the complete history of reservation activities in the system. These logs track all reservation events and changes, ordered by initialization date. These endpoints require authentication via cookie-based JWT tokens.
+
+## Available Endpoints
+
+<CardGroup cols={1}>
+  <Card title="List Logs" icon="list" href="/api/logs/list">
+    Retrieve all reservation logs from the system
+  </Card>
+</CardGroup>
+
+## Authentication
+
+All reserve logs endpoints require authentication using a JWT token stored in the `access_token` cookie. The user must have appropriate role permissions to access these endpoints.
+
+## Common Fields
+
+<ResponseField name="INIT_DATE" type="date">
+  Initialization date of the reservation event
+</ResponseField>
+
+<ResponseField name="Additional log fields" type="various">
+  The log entries contain additional fields from the `log_reservation` table, which may include reservation IDs, user information, action types, status changes, timestamps, and other audit trail data.
+</ResponseField>
+
+## Use Cases
+
+- Audit reservation activities
+- Track reservation history
+- Monitor system usage
+- Generate compliance reports
+- Investigate reservation issues
+- Analyze reservation patterns over time

@@ -1,0 +1,132 @@
+---
+title: 'Update Extra'
+api: 'PUT /extra/update'
+description: 'Update an existing extra item in the system'
+---
+
+This endpoint allows you to update the information of an existing extra item (such as chairs, tables, tablecloths, etc.). The user must be authenticated with a valid JWT token stored in the `access_token` cookie.
+
+## Request Body
+
+<ParamField body="v_id_extra" type="number" required>
+  ID of the extra item to update. Must be a positive integer.
+  
+  Example: `3`
+</ParamField>
+
+<ParamField body="v_name" type="string" required>
+  New name for the extra item
+  
+  Example: `"Mesa Redonda"` (Round Table)
+</ParamField>
+
+<ParamField body="v_value_add" type="number" required>
+  New additional cost for the extra item. Must be a positive number.
+  
+  Example: `8000`
+</ParamField>
+
+<ParamField body="v_quantity" type="number" required>
+  New available quantity. Must be a positive integer.
+  
+  Example: `20`
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message confirming the extra was updated
+  
+  Example: `"Update Exitoso"`
+</ResponseField>
+
+## Status Codes
+
+<ResponseField name="200" type="Success">
+  Extra updated successfully
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Validation error in the submitted data
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Token not sent or invalid (cookie missing or expired)
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  No extra exists with the provided ID
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Internal server error
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X PUT https://api.example.com/extra/update \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN" \
+  -d '{
+    "v_id_extra": 3,
+    "v_name": "Mesa Redonda",
+    "v_value_add": 8000,
+    "v_quantity": 20
+  }'
+```
+
+```javascript JavaScript
+fetch('https://api.example.com/extra/update', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include',
+  body: JSON.stringify({
+    v_id_extra: 3,
+    v_name: 'Mesa Redonda',
+    v_value_add: 8000,
+    v_quantity: 20
+  })
+});
+```
+
+```python Python
+import requests
+
+url = 'https://api.example.com/extra/update'
+cookies = {'access_token': 'YOUR_JWT_TOKEN'}
+data = {
+    'v_id_extra': 3,
+    'v_name': 'Mesa Redonda',
+    'v_value_add': 8000,
+    'v_quantity': 20
+}
+
+response = requests.put(url, json=data, cookies=cookies)
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success Response
+{
+  "message": "Update Exitoso"
+}
+```
+
+```json Error Response (Validation)
+{
+  "message": "El ID del extra debe ser un número positivo"
+}
+```
+
+```json Error Response (Not Found)
+{
+  "message": "No existe un extra con el ID proporcionado"
+}
+```
+
+</ResponseExample>

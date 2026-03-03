@@ -1,80 +1,442 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get started with DEMET Backend API in minutes - from installation to your first authenticated request
 ---
 
-## Get started in three steps
+## Get started with DEMET Backend
 
-Get your documentation site running locally and make your first customization.
+This guide will help you set up the DEMET Backend API locally and make your first authenticated request. You'll be up and running in less than 10 minutes.
 
-### Step 1: Set up your local environment
+<Note>
+  This quickstart assumes you have Node.js (v14+), PostgreSQL, and npm installed on your system.
+</Note>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+## Setup steps
+
+<Steps>
+  <Step title="Clone the repository">
+    First, clone the DEMET Backend repository to your local machine:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    ```bash
+    git clone https://github.com/ProyectoDemet/Backend-DEMET.git
+    cd Backend-DEMET
+    ```
+  </Step>
+  
+  <Step title="Install dependencies">
+    Install all required npm packages:
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    ```bash
+    npm install
+    ```
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    This will install the following key dependencies:
+    - `express` - Web framework
+    - `pg` - PostgreSQL client
+    - `jsonwebtoken` - JWT authentication
+    - `bcrypt` - Password hashing
+    - `zod` - Schema validation
+    - `cookie-parser` - Cookie handling
+    - `nodemailer` - Email sending
+    - `exceljs` - Excel report generation
+  </Step>
+  
+  <Step title="Configure environment variables">
+    Create a `.env` file in the root directory with the following variables:
+    
+    ```bash .env
+    # Database connection
+    DATABASE_URL=postgresql://username:password@localhost:5432/demet_db
+    
+    # JWT configuration
+    ACCESS_SECRET=your_access_token_secret_here
+    ACCESS_EXPIRE_IN=1h
+    REFRESH_SECRET=your_refresh_token_secret_here
+    REFRESH_EXPIRE_IN=7d
+    
+    # Server configuration
+    PORT=3002
+    
+    # Email configuration (Gmail)
+    GOOGLE_USER=your_email@gmail.com
+    GOOGLE_PWD=your_app_password
+    EMAIL_ADMIN=admin@example.com
+    ```
+    
+    <Warning>
+      Make sure to use strong, unique secrets for `ACCESS_SECRET` and `REFRESH_SECRET`. Never commit your `.env` file to version control.
+    </Warning>
+  </Step>
+  
+  <Step title="Set up the database">
+    Ensure your PostgreSQL database is running and create the necessary tables and stored procedures. The database should have the following main tables:
+    
+    - `employee` - Employee accounts
+    - `partner` - Hotel partners
+    - `space` - Available spaces/rooms
+    - `rate` - Pricing information
+    - `extra` - Additional services
+    - `reservation` - Booking records
+    
+    <Note>
+      The API uses stored procedures (e.g., `p_insert_employee`, `p_update_employee`) for database operations. Make sure these are properly set up in your PostgreSQL instance.
+    </Note>
+  </Step>
+  
+  <Step title="Start the server">
+    Launch the development server:
+    
+    ```bash
+    npm run dev
+    ```
+    
+    Or for production:
+    
+    ```bash
+    npm start
+    ```
+    
+    You should see:
+    ```
+    Servidor escuchando en http://localhost:3002
+    ```
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Make your first API call
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Now that the server is running, let's make your first authenticated requests.
 
-### Step 3: Go live
+### Register an employee account
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+Create your first employee account with administrator privileges:
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3002/intern/signup \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=ADMIN_TOKEN_HERE" \
+  -d '{
+    "name": "Juan Pérez",
+    "email": "juan@example.com",
+    "password": "123456",
+    "rol": "Administrador"
+  }'
+```
+
+```javascript JavaScript (fetch)
+const response = await fetch('http://localhost:3002/intern/signup', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  credentials: 'include', // Important for cookies
+  body: JSON.stringify({
+    name: 'Juan Pérez',
+    email: 'juan@example.com',
+    password: '123456',
+    rol: 'Administrador'
+  })
+});
+
+const data = await response.json();
+console.log(data); // { mensaje: "Registro Exitoso" }
+```
+
+```python Python (requests)
+import requests
+
+response = requests.post(
+    'http://localhost:3002/intern/signup',
+    json={
+        'name': 'Juan Pérez',
+        'email': 'juan@example.com',
+        'password': '123456',
+        'rol': 'Administrador'
+    },
+    headers={'Cookie': 'access_token=ADMIN_TOKEN_HERE'}
+)
+
+print(response.json())  # {'mensaje': 'Registro Exitoso'}
+```
+</CodeGroup>
+
+<Note>
+  The `/intern/signup` endpoint requires authentication from an existing administrator. For the first account, you'll need to create it directly in the database or modify the `verifyRol` middleware temporarily.
+</Note>
+
+**Response** (201 Created):
+```json
+{
+  "mensaje": "Registro Exitoso"
+}
+```
+
+### Login and receive tokens
+
+Authenticate with your newly created account:
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3002/intern/login \
+  -H "Content-Type: application/json" \
+  -c cookies.txt \
+  -d '{
+    "email": "juan@example.com",
+    "password": "123456"
+  }'
+```
+
+```javascript JavaScript (fetch)
+const response = await fetch('http://localhost:3002/intern/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  credentials: 'include', // Automatically handles cookies
+  body: JSON.stringify({
+    email: 'juan@example.com',
+    password: '123456'
+  })
+});
+
+const data = await response.json();
+console.log(data); // { auth: true }
+// Cookies are automatically stored by the browser
+```
+
+```python Python (requests)
+import requests
+
+session = requests.Session()
+
+response = session.post(
+    'http://localhost:3002/intern/login',
+    json={
+        'email': 'juan@example.com',
+        'password': '123456'
+    }
+)
+
+print(response.json())  # {'auth': True}
+# Cookies are stored in the session object
+```
+</CodeGroup>
+
+**Response** (200 OK):
+```json
+{
+  "auth": true
+}
+```
+
+The server will set two HTTP-only cookies in the response:
+- `access_token` - Valid for 1 hour (default)
+- `refresh_token` - Valid for 7 days (default)
+
+### Make an authenticated request
+
+Use the cookies from login to access protected endpoints:
+
+<CodeGroup>
+```bash cURL
+curl -X GET http://localhost:3002/intern/me \
+  -b cookies.txt
+```
+
+```javascript JavaScript (fetch)
+const response = await fetch('http://localhost:3002/intern/me', {
+  method: 'GET',
+  credentials: 'include' // Sends cookies automatically
+});
+
+const data = await response.json();
+console.log(data); // { role: "Administrador" }
+```
+
+```python Python (requests)
+response = session.get('http://localhost:3002/intern/me')
+print(response.json())  # {'role': 'Administrador'}
+```
+</CodeGroup>
+
+**Response** (201 Created):
+```json
+{
+  "role": "Administrador"
+}
+```
+
+### Get all spaces (public endpoint)
+
+Some endpoints don't require authentication. Try fetching all available spaces:
+
+<CodeGroup>
+```bash cURL
+curl -X GET http://localhost:3002/space/get
+```
+
+```javascript JavaScript (fetch)
+const response = await fetch('http://localhost:3002/space/get');
+const spaces = await response.json();
+console.log(spaces);
+```
+
+```python Python (requests)
+response = requests.get('http://localhost:3002/space/get')
+spaces = response.json()
+print(spaces)
+```
+</CodeGroup>
+
+**Response** (200 OK):
+```json
+[
+  {
+    "id_rate": 3,
+    "name": "Salón Principal",
+    "descrip": "Espacio amplio con sonido y sillas incluidas",
+    "pax": 80,
+    "value4": 250000,
+    "value8": 400000,
+    "value_extra": 60000
+  }
+]
+```
+
+## Working with reservations
+
+Create a new reservation with the authenticated session:
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3002/reserve/register \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{
+    "v_id_reservation": "RSV00123",
+    "v_name": "María García",
+    "v_email": "maria@example.com",
+    "v_phone_number": "3104567890",
+    "v_init_date": "2025-06-10T10:00:00Z",
+    "v_end_date": "2025-06-10T15:00:00Z",
+    "v_pax": 20,
+    "v_status": "EN PROGRESO",
+    "v_extras": "[{\"id_extra\":1, \"quantity\":2, \"value_add\":5000}]",
+    "v_amount": 85000,
+    "v_total_value": 90000,
+    "v_fk_rate": 2
+  }'
+```
+
+```javascript JavaScript (fetch)
+const response = await fetch('http://localhost:3002/reserve/register', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  credentials: 'include',
+  body: JSON.stringify({
+    v_id_reservation: 'RSV00123',
+    v_name: 'María García',
+    v_email: 'maria@example.com',
+    v_phone_number: '3104567890',
+    v_init_date: '2025-06-10T10:00:00Z',
+    v_end_date: '2025-06-10T15:00:00Z',
+    v_pax: 20,
+    v_status: 'EN PROGRESO',
+    v_extras: '[{"id_extra":1, "quantity":2, "value_add":5000}]',
+    v_amount: 85000,
+    v_total_value: 90000,
+    v_fk_rate: 2
+  })
+});
+
+const data = await response.json();
+console.log(data);
+```
+</CodeGroup>
+
+**Response** (200 OK):
+```json
+{
+  "message": "Reserva Registrada Exitosamente"
+}
+```
+
+## Token refresh flow
+
+When your access token expires (after 1 hour), you can refresh it without logging in again:
+
+<CodeGroup>
+```bash cURL
+curl -X GET http://localhost:3002/intern/refresh \
+  -b cookies.txt \
+  -c cookies.txt
+```
+
+```javascript JavaScript (fetch)
+const response = await fetch('http://localhost:3002/intern/refresh', {
+  method: 'GET',
+  credentials: 'include'
+});
+
+const data = await response.json();
+console.log(data); // { message: "Access token renovado" }
+```
+</CodeGroup>
+
+**Response** (200 OK):
+```json
+{
+  "message": "Access token renovado"
+}
+```
+
+The server will issue a new `access_token` cookie while keeping the `refresh_token` unchanged.
+
+## Error handling
+
+The API returns standard HTTP status codes and JSON error messages:
+
+```json
+// 401 Unauthorized - No token provided
+{
+  "auth": false,
+  "message": "Token No Enviado"
+}
+
+// 401 Unauthorized - Invalid or expired token
+{
+  "auth": false,
+  "message": "Token Invalido o Expirado"
+}
+
+// 401 Unauthorized - Insufficient permissions
+{
+  "auth": false,
+  "message": "Usuario/Rol No Autorizado",
+  "role": "Asistente de Gerencia"
+}
+
+// 400 Bad Request - Validation error
+{
+  "error": "Email en Uso"
+}
+```
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Authentication deep dive" icon="shield" href="/authentication">
+    Learn about the JWT authentication system, token lifecycle, and security best practices
+  </Card>
+  
+  <Card title="API reference" icon="book" href="/reference">
+    Explore all available endpoints, request schemas, and response formats
+  </Card>
+  
+  <Card title="Explore documentation" icon="compass" href="/reference">
+    View the interactive Scalar API documentation at `http://localhost:3002/reference`
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

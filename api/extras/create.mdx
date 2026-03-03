@@ -1,0 +1,113 @@
+---
+title: 'Create Extra'
+api: 'POST /extra/register'
+description: 'Register a new extra item in the system'
+---
+
+This endpoint allows you to register a new extra item (such as chairs, tables, tablecloths, etc.) available in the system. The user must be authenticated with a valid JWT token stored in the `access_token` cookie.
+
+## Request Body
+
+<ParamField body="v_name" type="string" required>
+  Name of the extra item
+  
+  Example: `"Silla Plástica"` (Plastic Chair)
+</ParamField>
+
+<ParamField body="v_value_add" type="number" required>
+  Additional cost for the extra item. Must be a positive number.
+  
+  Example: `5000`
+</ParamField>
+
+<ParamField body="v_quantity" type="number" required>
+  Available quantity of the extra item. Must be a positive integer.
+  
+  Example: `50`
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message confirming the extra was registered
+  
+  Example: `"Registro Exitoso"`
+</ResponseField>
+
+## Status Codes
+
+<ResponseField name="200" type="Success">
+  Extra registered successfully
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Validation error in the submitted data
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Token not sent or invalid (cookie missing or expired)
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Internal server error
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X POST https://api.example.com/extra/register \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN" \
+  -d '{
+    "v_name": "Silla Plástica",
+    "v_value_add": 5000,
+    "v_quantity": 50
+  }'
+```
+
+```javascript JavaScript
+fetch('https://api.example.com/extra/register', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include',
+  body: JSON.stringify({
+    v_name: 'Silla Plástica',
+    v_value_add: 5000,
+    v_quantity: 50
+  })
+});
+```
+
+```python Python
+import requests
+
+url = 'https://api.example.com/extra/register'
+cookies = {'access_token': 'YOUR_JWT_TOKEN'}
+data = {
+    'v_name': 'Silla Plástica',
+    'v_value_add': 5000,
+    'v_quantity': 50
+}
+
+response = requests.post(url, json=data, cookies=cookies)
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success Response
+{
+  "message": "Registro Exitoso"
+}
+```
+
+```json Error Response
+{
+  "message": "El nombre es obligatorio"
+}
+```
+
+</ResponseExample>

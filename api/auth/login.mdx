@@ -1,0 +1,174 @@
+---
+title: 'Employee Login'
+api: 'POST /intern/login'
+description: 'Authenticate an employee and receive access tokens'
+---
+
+## Overview
+
+This endpoint authenticates an employee using their email and password. Upon successful authentication, it returns both an access token and a refresh token via HTTP-only cookies.
+
+## Request Body
+
+<ParamField body="email" type="string" required>
+  Employee's registered email address. Must be a valid email format.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Employee's password. Must be at least 6 characters long.
+</ParamField>
+
+## Response
+
+<ResponseField name="auth" type="boolean">
+  Authentication status. Returns `true` when login is successful.
+</ResponseField>
+
+## Cookies Set
+
+On successful login, the following cookies are automatically set:
+
+<ResponseField name="access_token" type="string">
+  JWT token for accessing protected endpoints. Short-lived token.
+  
+  **Cookie Settings:**
+  - `httpOnly: false`
+  - `secure: true`
+  - `sameSite: none`
+</ResponseField>
+
+<ResponseField name="refresh_token" type="string">
+  JWT token for refreshing the access token. Long-lived token.
+  
+  **Cookie Settings:**
+  - `httpOnly: false`
+  - `secure: true`
+  - `sameSite: none`
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X POST https://api.demet.com/intern/login \
+  -H "Content-Type: application/json" \
+  -c cookies.txt \
+  -d '{
+    "email": "juan@example.com",
+    "password": "123456"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.demet.com/intern/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include', // Important: enables cookies
+  body: JSON.stringify({
+    email: 'juan@example.com',
+    password: '123456'
+  })
+});
+
+const data = await response.json();
+if (data.auth) {
+  console.log('Login successful');
+  // Cookies are automatically stored by the browser
+}
+```
+
+```python Python
+import requests
+
+url = 'https://api.demet.com/intern/login'
+headers = {'Content-Type': 'application/json'}
+
+payload = {
+    'email': 'juan@example.com',
+    'password': '123456'
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())
+
+# Cookies are stored in response.cookies
+access_token = response.cookies.get('access_token')
+refresh_token = response.cookies.get('refresh_token')
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 Success
+{
+  "auth": true
+}
+```
+
+```json 401 User Not Found
+{
+  "message": "Usuario No Encontrado"
+}
+```
+
+```json 401 Incorrect Password
+{
+  "message": "Contraseña Incorrecta"
+}
+```
+
+```json 400 Validation Error
+{
+  "message": "Email Invalido"
+}
+```
+
+</ResponseExample>
+
+## Authentication Flow
+
+1. **Submit Credentials**: Send email and password to the login endpoint
+2. **Verification**: System verifies email exists and password matches
+3. **Token Generation**: Access and refresh tokens are generated
+4. **Cookie Storage**: Tokens are sent as secure HTTP-only cookies
+5. **Subsequent Requests**: Browser automatically includes cookies in future requests
+
+## Validation Rules
+
+<Expandable title="Login Schema Validation">
+
+| Field | Type | Validation | Error Message |
+|-------|------|------------|---------------|
+| email | string | Valid email format | "Email Invalido" |
+| password | string | Minimum 6 characters | "La contraseña debe tener al menos 6 caracteres" |
+
+</Expandable>
+
+## Security Features
+
+- Passwords are compared using bcrypt hashing
+- Tokens are stored in secure cookies (HTTPS only in production)
+- Access tokens expire after a short period (use refresh token to renew)
+- Refresh tokens have a longer expiration time
+- Failed login attempts return generic error messages to prevent user enumeration
+
+## Token Payload
+
+The generated tokens contain the following claims:
+
+```json
+{
+  "id_employee": 123,
+  "rol": "Administrador"
+}
+```
+
+## Next Steps
+
+After successful login:
+
+1. Use the access token (automatically included in cookies) to access protected endpoints
+2. When the access token expires, use the [refresh endpoint](/api/auth/refresh) to get a new one
+3. Use the [logout endpoint](/api/auth/logout) to end the session

@@ -1,0 +1,139 @@
+---
+title: 'Update Rate'
+api: 'PUT /rate/update'
+description: 'Update an existing rate'
+---
+
+This endpoint allows you to update the information of a previously registered rate. Authentication is required via JWT token in the `access_token` cookie.
+
+## Request Body
+
+<ParamField body="v_id_rate" type="number" required>
+  ID of the rate to update. Must be a positive integer.
+</ParamField>
+
+<ParamField body="v_name" type="string" required>
+  Updated name of the rate
+</ParamField>
+
+<ParamField body="v_pax" type="number" required>
+  Updated maximum capacity (number of people). Must be a positive integer.
+</ParamField>
+
+<ParamField body="v_value4" type="number" required>
+  Updated price for 4-hour rental period. Must be a positive number.
+</ParamField>
+
+<ParamField body="v_value8" type="number" required>
+  Updated price for 8-hour rental period. Must be a positive number.
+</ParamField>
+
+<ParamField body="v_value_extra" type="number" required>
+  Updated price per additional hour. Must be a positive number.
+</ParamField>
+
+<Note>
+  The `v_isPartner` and `v_idSpace` fields cannot be updated. To change these values, delete and recreate the rate.
+</Note>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message confirming the rate was updated
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X PUT https://api.demet.com/rate/update \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN" \
+  -d '{
+    "v_id_rate": 5,
+    "v_name": "Tarifa Entre Semana",
+    "v_pax": 100,
+    "v_value4": 220000,
+    "v_value8": 360000,
+    "v_value_extra": 55000
+  }'
+```
+
+```javascript JavaScript
+fetch('https://api.demet.com/rate/update', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include',
+  body: JSON.stringify({
+    v_id_rate: 5,
+    v_name: 'Tarifa Entre Semana',
+    v_pax: 100,
+    v_value4: 220000,
+    v_value8: 360000,
+    v_value_extra: 55000
+  })
+});
+```
+
+```python Python
+import requests
+
+url = 'https://api.demet.com/rate/update'
+data = {
+    'v_id_rate': 5,
+    'v_name': 'Tarifa Entre Semana',
+    'v_pax': 100,
+    'v_value4': 220000,
+    'v_value8': 360000,
+    'v_value_extra': 55000
+}
+
+response = requests.put(url, json=data, cookies={'access_token': 'YOUR_JWT_TOKEN'})
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 - Success
+{
+  "message": "Update Exitoso"
+}
+```
+
+```json 400 - Validation Error
+{
+  "message": "El ID de la tarifa es obligatorio"
+}
+```
+
+```json 401 - Unauthorized
+{
+  "message": "Token no enviado o inválido"
+}
+```
+
+```json 404 - Rate Not Found
+{
+  "message": "Tarifa no encontrada"
+}
+```
+
+```json 500 - Server Error
+{
+  "message": "Error interno del servidor"
+}
+```
+
+</ResponseExample>
+
+## Error Codes
+
+| Status Code | Description |
+|-------------|-------------|
+| 200 | Rate successfully updated |
+| 400 | Validation error or duplicate data |
+| 401 | Token not sent or invalid (missing or expired cookie) |
+| 404 | Rate not found |
+| 500 | Internal server error |

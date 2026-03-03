@@ -1,0 +1,740 @@
+---
+title: 'Database Setup'
+description: 'PostgreSQL configuration, schema design, and connection management'
+icon: 'database'
+---
+
+## Overview
+
+DEMET Backend uses PostgreSQL as its relational database, managing hotel reservations, spaces, rates, partners, extras, and employees. The database is accessed through a connection pool for optimal performance.
+
+## Database Connection
+
+The application uses the `pg` (node-postgres) library with connection pooling.
+
+### Connection Configuration
+
+<CodeGroup>
+```javascript lib/db.js
+import { Pool } from "pg";
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL
+});
+
+export default pool;
+```
+</CodeGroup>
+
+### Connection String Format
+
+```env
+DATABASE_URL=postgresql://username:password@host:port/database
+```
+
+<ParamField path="username" type="string" required>
+  PostgreSQL user with appropriate permissions
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  User password (URL-encoded if contains special characters)
+</ParamField>
+
+<ParamField path="host" type="string" required>
+  Database host (e.g., `localhost`, `db.example.com`)
+</ParamField>
+
+<ParamField path="port" type="number" default="5432">
+  PostgreSQL port (default: 5432)
+</ParamField>
+
+<ParamField path="database" type="string" required>
+  Database name
+</ParamField>
+
+## Connection Pool
+
+Connection pooling improves performance by reusing database connections.
+
+### Benefits
+
+<CardGroup cols={2}>
+  <Card title="Performance" icon="gauge-high">
+    Reuses connections instead of creating new ones for each request
+  </Card>
+  <Card title="Scalability" icon="arrows-up-to-line">
+    Handles concurrent requests efficiently
+  </Card>
+  <Card title="Resource Management" icon="memory">
+    Limits maximum connections to prevent overwhelming the database
+  </Card>
+  <Card title="Automatic Reconnection" icon="rotate">
+    Handles connection failures and reconnects automatically
+  </Card>
+</CardGroup>
+
+### Configuration Options
+
+```javascript
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 20,                    // Maximum pool size
+    idleTimeoutMillis: 30000,   // Close idle clients after 30 seconds
+    connectionTimeoutMillis: 2000, // Wait 2 seconds for connection
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+```
+
+## Database Schema
+
+The DEMET Backend manages several core entities:
+
+### Entity Relationships
+
+```mermaid
+erDiagram
+    EMPLOYEE ||--o{ RESERVATION : creates
+    EMPLOYEE ||--o{ REQUEST : manages
+    RATE ||--o{ RESERVATION : has
+    RATE }o--|| SPACE : belongs_to
+    PARTNER ||--o{ REQUEST : makes
+    RESERVATION ||--o{ LOG_RESERVE : logs
+    RESERVATION }o--o{ EXTRA : includes
+
+    EMPLOYEE {
+        int id_employee PK
+        string name
+        string email
+        string password
+        string rol
+    }
+
+    RESERVATION {
+        string id_reservation PK
+        string name
+        string email
+        string phone_number
+        date init_date
+        date end_date
+        int pax
+        string status
+        string extras
+        decimal amount
+        decimal total_value
+        int fk_rate FK
+        int fk_employee FK
+    }
+
+    SPACE {
+        int id_space PK
+        string name
+        text descrip
+        boolean isPartner
+        int pax
+        decimal value4
+        decimal value8
+        decimal value_extra
+        array url_img
+    }
+
+    RATE {
+        int id_rate PK
+        string name
+        int pax
+        decimal value4
+        decimal value8
+        decimal value_extra
+        boolean isPartner
+        int idSpace FK
+    }
+
+    PARTNER {
+        string id PK
+        string name
+        string email
+        string phoneNumber
+        int cedula
+    }
+
+    EXTRA {
+        int id_extra PK
+        string name
+        decimal value_add
+        int quantity
+    }
+
+    REQUEST {
+        int id_request PK
+        string tittle
+        text description
+        string name
+        string email
+        string phone_number
+        boolean is_partner
+        int pax
+        date init_date
+        date end_date
+        string status
+        int fk_rate FK
+    }
+```
+
+### Core Tables
+
+#### EMPLOYEE
+
+Stores employee information for authentication and authorization.
+
+```sql
+CREATE TABLE EMPLOYEE (
+    id_employee SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,  -- Hashed with bcrypt
+    rol VARCHAR(50) CHECK (rol IN ('Administrador', 'Asistente de Gerencia'))
+);
+```
+
+<Note>
+  Passwords are hashed using bcrypt before storage. Never store plain text passwords!
+</Note>
+
+#### RESERVATION
+
+Core table for managing hotel/space reservations.
+
+```sql
+CREATE TABLE RESERVATION (
+    id_reservation VARCHAR(10) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(13) NOT NULL,
+    init_date DATE NOT NULL,
+    end_date DATE NOT NULL CHECK (end_date > init_date),
+    pax INTEGER NOT NULL CHECK (pax > 0),
+    status VARCHAR(20) CHECK (status IN ('EN PROGRESO', 'FINALIZADO')),
+    extras TEXT,
+    amount DECIMAL(10,2) NOT NULL CHECK (amount >= 0),
+    total_value DECIMAL(10,2) NOT NULL CHECK (total_value >= 0),
+    fk_rate INTEGER REFERENCES RATE(id_rate),
+    fk_employee INTEGER REFERENCES EMPLOYEE(id_employee)
+);
+```
+
+#### SPACE
+
+Defines available spaces/rooms for reservation.
+
+```sql
+CREATE TABLE SPACE (
+    id_space SERIAL PRIMARY KEY,
+    name VARCHAR(255) UNIQUE NOT NULL,
+    descrip TEXT NOT NULL,
+    isPartner BOOLEAN DEFAULT false,
+    pax INTEGER NOT NULL CHECK (pax > 0),
+    value4 DECIMAL(10,2) NOT NULL CHECK (value4 > 0),  -- Price for 4 hours
+    value8 DECIMAL(10,2) NOT NULL CHECK (value8 > 0),  -- Price for 8 hours
+    value_extra DECIMAL(10,2) NOT NULL CHECK (value_extra > 0),  -- Extra hour price
+    url_img TEXT[] NOT NULL  -- Array of image URLs
+);
+```
+
+#### RATE
+
+Pricing rates for different customer types (partner/non-partner).
+
+```sql
+CREATE TABLE RATE (
+    id_rate SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,  -- e.g., 'Socio', 'No Socio'
+    pax INTEGER NOT NULL CHECK (pax > 0),
+    value4 DECIMAL(10,2) NOT NULL CHECK (value4 > 0),
+    value8 DECIMAL(10,2) NOT NULL CHECK (value8 > 0),
+    value_extra DECIMAL(10,2) NOT NULL CHECK (value_extra > 0),
+    isPartner BOOLEAN DEFAULT false,
+    idSpace INTEGER REFERENCES SPACE(id_space)
+);
+```
+
+#### PARTNER
+
+Registered partners who receive discounted rates.
+
+```sql
+CREATE TABLE PARTNER (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phoneNumber VARCHAR(13) NOT NULL,
+    cedula INTEGER UNIQUE NOT NULL CHECK (cedula > 0)
+);
+```
+
+#### EXTRA
+
+Additional services/items that can be added to reservations.
+
+```sql
+CREATE TABLE EXTRA (
+    id_extra SERIAL PRIMARY KEY,
+    name VARCHAR(255) UNIQUE NOT NULL,
+    value_add DECIMAL(10,2) NOT NULL CHECK (value_add > 0),
+    quantity INTEGER NOT NULL CHECK (quantity > 0)
+);
+```
+
+#### REQUEST
+
+Reservation requests pending approval.
+
+```sql
+CREATE TABLE REQUEST (
+    id_request SERIAL PRIMARY KEY,
+    tittle VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(13) NOT NULL,
+    is_partner BOOLEAN DEFAULT false,
+    pax INTEGER NOT NULL CHECK (pax > 0),
+    init_date DATE NOT NULL,
+    end_date DATE NOT NULL CHECK (end_date > init_date),
+    status VARCHAR(20) DEFAULT 'PENDIENTE' CHECK (status IN ('PENDIENTE', 'EN PROGRESO', 'FINALIZADO')),
+    fk_rate INTEGER REFERENCES RATE(id_rate)
+);
+```
+
+## Stored Procedures
+
+The application uses PostgreSQL stored procedures for complex operations.
+
+### Reservation Operations
+
+<CodeGroup>
+```sql p_insert_reservation
+CREATE OR REPLACE PROCEDURE p_insert_reservation(
+    v_id_reservation VARCHAR,
+    v_name VARCHAR,
+    v_email VARCHAR,
+    v_phone_number VARCHAR,
+    v_init_date DATE,
+    v_end_date DATE,
+    v_pax INTEGER,
+    v_status VARCHAR,
+    v_extras TEXT,
+    v_amount DECIMAL,
+    v_total_value DECIMAL,
+    v_fk_rate INTEGER,
+    v_fk_employee INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO RESERVATION (
+        id_reservation, name, email, phone_number,
+        init_date, end_date, pax, status, extras,
+        amount, total_value, fk_rate, fk_employee
+    ) VALUES (
+        v_id_reservation, v_name, v_email, v_phone_number,
+        v_init_date, v_end_date, v_pax, v_status, v_extras,
+        v_amount, v_total_value, v_fk_rate, v_fk_employee
+    );
+END;
+$$;
+```
+
+```sql p_update_reservation
+CREATE OR REPLACE PROCEDURE p_update_reservation(
+    v_id_reservation VARCHAR,
+    v_email VARCHAR,
+    v_phone_number VARCHAR,
+    v_init_date DATE,
+    v_end_date DATE,
+    v_pax INTEGER,
+    v_status VARCHAR,
+    v_extras TEXT,
+    v_amount DECIMAL,
+    v_total_value DECIMAL,
+    v_fk_rate INTEGER,
+    v_fk_employee INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE RESERVATION SET
+        email = v_email,
+        phone_number = v_phone_number,
+        init_date = v_init_date,
+        end_date = v_end_date,
+        pax = v_pax,
+        status = v_status,
+        extras = v_extras,
+        amount = v_amount,
+        total_value = v_total_value,
+        fk_rate = v_fk_rate,
+        fk_employee = v_fk_employee
+    WHERE id_reservation = v_id_reservation;
+END;
+$$;
+```
+
+```sql p_delete_reservation
+CREATE OR REPLACE PROCEDURE p_delete_reservation(
+    v_id_reservation VARCHAR
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    DELETE FROM RESERVATION
+    WHERE id_reservation = v_id_reservation;
+END;
+$$;
+```
+</CodeGroup>
+
+### Using Stored Procedures
+
+<CodeGroup>
+```javascript service/reserve.service.js
+import pool from "../lib/db.js";
+
+export const reserveRegister = async(
+    v_id_reservation,
+    v_name,
+    v_email,
+    v_phone_number,
+    v_init_date,
+    v_end_date,
+    v_pax,
+    v_status,
+    v_extras,
+    v_amount,
+    v_total_value,
+    v_fk_rate,
+    v_fk_employee 
+) => {
+    try {
+        await pool.query(
+            'CALL p_insert_reservation($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13);',
+            [
+                v_id_reservation,
+                v_name,
+                v_email,
+                v_phone_number,
+                v_init_date,
+                v_end_date,
+                v_pax,
+                v_status,
+                v_extras,
+                v_amount,
+                v_total_value,
+                v_fk_rate,
+                v_fk_employee 
+            ]
+        );
+    } catch (error) {
+        errorHandler(error);
+    }
+}
+
+export const reserveGet = async() => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM RESERVATION;'
+        );
+        return result.rows;
+    } catch (error) {
+        errorHandler(error);
+    }
+}
+```
+</CodeGroup>
+
+## Database Views
+
+Views for reporting and analytics:
+
+### REPORT View
+
+```sql
+CREATE OR REPLACE VIEW REPORT AS
+SELECT 
+    r.id_reservation,
+    r.name,
+    r.email,
+    r.init_date AS fecha,
+    r.end_date,
+    r.pax,
+    r.total_value,
+    s.name AS espacio,
+    rt.name AS tarifa
+FROM RESERVATION r
+JOIN RATE rt ON r.fk_rate = rt.id_rate
+JOIN SPACE s ON rt.idSpace = s.id_space
+WHERE r.status = 'FINALIZADO'
+ORDER BY r.init_date;
+```
+
+### estimated_report View
+
+```sql
+CREATE OR REPLACE VIEW estimated_report AS
+SELECT 
+    req.id_request,
+    req.name,
+    req.email,
+    req.init_date AS fecha,
+    req.end_date,
+    req.pax,
+    calculate_Value(req.end_date, req.init_date, req.fk_rate) AS total_estimado,
+    s.name AS espacio,
+    rt.name AS tarifa
+FROM REQUEST req
+JOIN RATE rt ON req.fk_rate = rt.id_rate
+JOIN SPACE s ON rt.idSpace = s.id_space
+ORDER BY req.init_date;
+```
+
+## Database Functions
+
+### Price Calculation Function
+
+```sql
+CREATE OR REPLACE FUNCTION calculate_Value(
+    v_end_date DATE,
+    v_init_date DATE,
+    v_fk_rate INTEGER
+)
+RETURNS DECIMAL(10,2)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    days INTEGER;
+    hours INTEGER;
+    rate_value4 DECIMAL(10,2);
+    rate_value8 DECIMAL(10,2);
+    rate_extra DECIMAL(10,2);
+    total DECIMAL(10,2) := 0;
+BEGIN
+    -- Calculate days
+    days := v_end_date - v_init_date;
+    
+    -- Get rate values
+    SELECT value4, value8, value_extra
+    INTO rate_value4, rate_value8, rate_extra
+    FROM RATE
+    WHERE id_rate = v_fk_rate;
+    
+    -- Calculate total based on days
+    -- Add pricing logic here
+    
+    RETURN total;
+END;
+$$;
+```
+
+## Query Examples
+
+### Get All Active Reservations
+
+```sql
+SELECT 
+    r.id_reservation,
+    r.name,
+    r.email,
+    r.init_date,
+    r.end_date,
+    r.status,
+    s.name AS space_name,
+    rt.name AS rate_name,
+    r.total_value
+FROM RESERVATION r
+JOIN RATE rt ON r.fk_rate = rt.id_rate
+JOIN SPACE s ON rt.idSpace = s.id_space
+WHERE r.status = 'EN PROGRESO'
+ORDER BY r.init_date;
+```
+
+### Get Partner Reservations
+
+```sql
+SELECT 
+    p.name AS partner_name,
+    COUNT(r.id_reservation) AS total_reservations,
+    SUM(r.total_value) AS total_revenue
+FROM PARTNER p
+LEFT JOIN REQUEST req ON req.email = p.email AND req.is_partner = true
+LEFT JOIN RESERVATION r ON r.email = p.email
+GROUP BY p.id, p.name
+ORDER BY total_revenue DESC;
+```
+
+### Get Revenue by Space
+
+```sql
+SELECT 
+    s.name AS space_name,
+    COUNT(r.id_reservation) AS total_bookings,
+    SUM(r.total_value) AS total_revenue,
+    AVG(r.total_value) AS avg_booking_value
+FROM SPACE s
+JOIN RATE rt ON rt.idSpace = s.id_space
+JOIN RESERVATION r ON r.fk_rate = rt.id_rate
+WHERE r.status = 'FINALIZADO'
+GROUP BY s.id_space, s.name
+ORDER BY total_revenue DESC;
+```
+
+## Performance Optimization
+
+### Indexes
+
+```sql
+-- Primary key indexes (created automatically)
+-- Additional performance indexes
+
+CREATE INDEX idx_reservation_dates ON RESERVATION(init_date, end_date);
+CREATE INDEX idx_reservation_status ON RESERVATION(status);
+CREATE INDEX idx_reservation_rate ON RESERVATION(fk_rate);
+CREATE INDEX idx_rate_space ON RATE(idSpace);
+CREATE INDEX idx_request_status ON REQUEST(status);
+CREATE INDEX idx_partner_email ON PARTNER(email);
+```
+
+### Connection Pool Best Practices
+
+<Steps>
+  <Step title="Always Release Connections">
+    ```javascript
+    const client = await pool.connect();
+    try {
+        const result = await client.query('SELECT * FROM RESERVATION');
+        return result.rows;
+    } finally {
+        client.release();  // Always release!
+    }
+    ```
+  </Step>
+
+  <Step title="Use Transactions for Multiple Operations">
+    ```javascript
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        await client.query('INSERT INTO ...');
+        await client.query('UPDATE ...');
+        await client.query('COMMIT');
+    } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+    } finally {
+        client.release();
+    }
+    ```
+  </Step>
+
+  <Step title="Use Prepared Statements">
+    ```javascript
+    // Prevents SQL injection
+    const result = await pool.query(
+        'SELECT * FROM RESERVATION WHERE id_reservation = $1',
+        [reservationId]
+    );
+    ```
+  </Step>
+</Steps>
+
+## Database Migrations
+
+For schema changes, consider using a migration tool:
+
+```bash
+# Using node-pg-migrate
+npm install -g node-pg-migrate
+
+# Create migration
+pg-migrate create add-user-table
+
+# Run migrations
+pg-migrate up
+```
+
+## Backup and Restore
+
+### Backup Database
+
+```bash
+# Full backup
+pg_dump -U username -d demet_db -F c -f backup.dump
+
+# SQL format
+pg_dump -U username -d demet_db > backup.sql
+
+# Specific tables
+pg_dump -U username -d demet_db -t RESERVATION -t SPACE > backup_tables.sql
+```
+
+### Restore Database
+
+```bash
+# From custom format
+pg_restore -U username -d demet_db backup.dump
+
+# From SQL file
+psql -U username -d demet_db < backup.sql
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Connection timeout">
+    - Check PostgreSQL is running: `systemctl status postgresql`
+    - Verify firewall rules allow connections
+    - Increase `connectionTimeoutMillis` in pool config
+    - Check `max_connections` in PostgreSQL config
+  </Accordion>
+
+  <Accordion title="Too many connections">
+    - Reduce pool `max` size
+    - Check for connection leaks (unreleased clients)
+    - Increase PostgreSQL `max_connections`
+    - Use connection pooler like PgBouncer
+  </Accordion>
+
+  <Accordion title="Slow queries">
+    - Add indexes on frequently queried columns
+    - Use `EXPLAIN ANALYZE` to identify bottlenecks
+    - Optimize complex joins
+    - Consider materialized views for reports
+  </Accordion>
+
+  <Accordion title="SSL connection error">
+    - For production, enable SSL in pool config
+    - For local development, disable SSL
+    ```javascript
+    ssl: process.env.NODE_ENV === 'production' 
+      ? { rejectUnauthorized: false } 
+      : false
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Email Notifications" icon="envelope" href="/guides/email-notifications">
+    Set up automated email alerts
+  </Card>
+  <Card title="Reports" icon="file-excel" href="/guides/reports">
+    Generate Excel reports from database
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference">
+    Explore database-backed endpoints
+  </Card>
+  <Card title="Configuration" icon="gear" href="/guides/configuration">
+    Configure database connection strings
+  </Card>
+</CardGroup>

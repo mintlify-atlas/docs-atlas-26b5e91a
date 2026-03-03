@@ -1,0 +1,291 @@
+---
+title: 'Installation & Setup'
+description: 'Get started with the DEMET Backend API - from installation to running your first server'
+icon: 'rocket'
+---
+
+## Overview
+
+DEMET Backend is a Node.js REST API for hotel reservation management built with Express, PostgreSQL, and modern security practices. This guide will walk you through setting up your development environment.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+<CardGroup cols={2}>
+  <Card title="Node.js" icon="node-js">
+    Version 16.x or higher recommended
+  </Card>
+  <Card title="PostgreSQL" icon="database">
+    Version 12.x or higher required
+  </Card>
+  <Card title="npm" icon="box">
+    Comes bundled with Node.js
+  </Card>
+  <Card title="Git" icon="git">
+    For cloning the repository
+  </Card>
+</CardGroup>
+
+## Installation
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the DEMET Backend repository from GitHub:
+
+    ```bash
+    git clone https://github.com/ProyectoDemet/Backend-DEMET.git
+    cd Backend-DEMET
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install all required npm packages:
+
+    ```bash
+    npm install
+    ```
+
+    This will install the following key dependencies:
+    - **express** - Web framework
+    - **pg** - PostgreSQL client
+    - **jsonwebtoken** - JWT authentication
+    - **bcrypt** - Password hashing
+    - **zod** - Schema validation
+    - **nodemailer** - Email notifications
+    - **exceljs** - Report generation
+    - **dotenv** - Environment configuration
+  </Step>
+
+  <Step title="Configure Environment Variables">
+    Create a `.env` file in the root directory:
+
+    ```bash
+    touch .env
+    ```
+
+    Add your configuration (see [Configuration Guide](/guides/configuration) for details):
+
+    ```env
+    DATABASE_URL=postgresql://user:password@localhost:5432/demet_db
+    ACCESS_SECRET=your-access-token-secret
+    ACCESS_EXPIRE_IN=1h
+    REFRESH_SECRET=your-refresh-token-secret
+    REFRESH_EXPIRE_IN=7d
+    PORT=3002
+    GOOGLE_USER=your-gmail@gmail.com
+    GOOGLE_PWD=your-app-specific-password
+    EMAIL_ADMIN=admin@example.com
+    ```
+
+    <Warning>
+      Never commit your `.env` file to version control. Add it to `.gitignore`.
+    </Warning>
+  </Step>
+
+  <Step title="Set Up the Database">
+    Create your PostgreSQL database and run the schema migrations:
+
+    ```bash
+    # Create database
+    createdb demet_db
+    
+    # Run migrations (if available)
+    # Or import your database schema
+    psql demet_db < schema.sql
+    ```
+
+    See the [Database Guide](/guides/database) for detailed schema information.
+  </Step>
+</Steps>
+
+## Running the Server
+
+### Development Mode
+
+For development with auto-reload on file changes:
+
+```bash
+npm run dev
+```
+
+This uses **nodemon** to automatically restart the server when you make changes to your code.
+
+### Production Mode
+
+For production deployment:
+
+```bash
+npm start
+```
+
+This runs the server with Node.js directly without auto-reload.
+
+<Note>
+  The server will start on the port specified in your `.env` file (default: 3002)
+</Note>
+
+## Verifying Installation
+
+Once the server is running, you should see:
+
+```bash
+Servidor escuchando en http://localhost:3002
+```
+
+### Test the API
+
+Visit the API documentation in your browser:
+
+```
+http://localhost:3002/reference
+```
+
+You should see the interactive Scalar API documentation interface.
+
+## Project Structure
+
+Understanding the project layout:
+
+```
+Backend-DEMET/
+├── controller/          # Request handlers
+│   ├── auth.controller.js
+│   ├── reserve.controller.js
+│   ├── report.controller.js
+│   └── ...
+├── routes/             # API route definitions
+│   ├── auth.routes.js
+│   ├── reserve.routes.js
+│   └── ...
+├── service/            # Business logic layer
+│   ├── email.service.js
+│   ├── excel.service.js
+│   ├── report.service.js
+│   └── ...
+├── middleware/         # Express middlewares
+│   ├── verifyToken.js
+│   ├── rolAccess.js
+│   └── validate.js
+├── validator/          # Zod validation schemas
+│   ├── reserve.schema.js
+│   ├── auth.schema.js
+│   └── ...
+├── lib/               # Database connection
+│   └── db.js
+├── util/              # Utilities and templates
+│   ├── templates/
+│   └── errorHandler.js
+├── server.js          # Application entry point
+├── swagger.js         # API documentation
+├── package.json       # Dependencies
+└── .env              # Environment variables
+```
+
+## Server Configuration
+
+The main server file (`server.js`) initializes:
+
+<CodeGroup>
+```javascript server.js
+import express from "express";
+import cors from 'cors';
+import dotenv from 'dotenv';
+import cookieParser from "cookie-parser";
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(cookieParser());
+app.use(cors({
+  origin: [
+    "https://clubmetabros.vercel.app",
+    "http://localhost:3000"
+  ],
+  credentials: true
+}));
+app.use(express.json());
+
+// Routes
+app.use('/intern', AuthRoutes);
+app.use('/partner/', partnerRoutes);
+app.use('/space/', spaceRoutes);
+app.use('/rate/', rateRoutes);
+app.use('/extra/', extraRoutes);
+app.use('/reserve/', reserveRoutes);
+app.use('/request/', requestRoutes);
+app.use('/report/', reportRoutes);
+app.use('/log/reserve/', logReserveRoutes);
+
+// Start server
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Servidor escuchando en http://localhost:${PORT}`);
+});
+```
+</CodeGroup>
+
+## CORS Configuration
+
+The API is configured to accept requests from:
+- Production frontend: `https://clubmetabros.vercel.app`
+- Local development: `http://localhost:3000`
+
+Credentials (cookies) are enabled for JWT token handling.
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Database connection fails">
+    - Verify PostgreSQL is running
+    - Check `DATABASE_URL` format in `.env`
+    - Ensure database exists and user has permissions
+    - Test connection: `psql $DATABASE_URL`
+  </Accordion>
+
+  <Accordion title="Port already in use">
+    Change the `PORT` in your `.env` file or kill the process using the port:
+    
+    ```bash
+    # Find process on port 3002
+    lsof -i :3002
+    
+    # Kill the process
+    kill -9 <PID>
+    ```
+  </Accordion>
+
+  <Accordion title="Module not found errors">
+    Delete `node_modules` and reinstall:
+    
+    ```bash
+    rm -rf node_modules package-lock.json
+    npm install
+    ```
+  </Accordion>
+
+  <Accordion title="Email sending fails">
+    - Verify Gmail credentials in `.env`
+    - Enable "Less secure app access" or use App Passwords
+    - Check `GOOGLE_USER` and `GOOGLE_PWD` values
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/guides/configuration">
+    Learn about environment variables and configuration options
+  </Card>
+  <Card title="Database Schema" icon="database" href="/guides/database">
+    Understand the database structure and relationships
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference">
+    Explore all available endpoints
+  </Card>
+  <Card title="Email Notifications" icon="envelope" href="/guides/email-notifications">
+    Configure email templates and sending
+  </Card>
+</CardGroup>

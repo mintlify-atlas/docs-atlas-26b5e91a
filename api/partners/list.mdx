@@ -1,0 +1,110 @@
+---
+title: 'List Partners'
+api: 'GET /partner/get'
+description: 'Retrieve all registered partners from the DEMET system'
+---
+
+## Overview
+
+This endpoint retrieves the complete list of all partners registered in the system. Authentication is required via JWT token in the `access_token` cookie.
+
+## Request
+
+This endpoint does not require any parameters. Simply make a GET request with valid authentication.
+
+## Response
+
+<ResponseField name="result" type="array">
+  Array of partner objects
+  
+  <Expandable title="Partner Object">
+    <ResponseField name="id" type="string">
+      Unique identifier for the partner
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Full name of the partner
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      Email address of the partner
+    </ResponseField>
+    
+    <ResponseField name="phoneNumber" type="string">
+      Contact phone number
+    </ResponseField>
+    
+    <ResponseField name="cedula" type="number">
+      Identification number
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET https://api.example.com/partner/get \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+fetch('https://api.example.com/partner/get', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  credentials: 'include' // Include cookies
+})
+.then(response => response.json())
+.then(data => console.log(data));
+```
+
+```python Python
+import requests
+
+url = "https://api.example.com/partner/get"
+cookies = {"access_token": "YOUR_JWT_TOKEN"}
+
+response = requests.get(url, cookies=cookies)
+print(response.json())
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 Success
+{
+  "result": [
+    {
+      "id": "P001",
+      "name": "Carlos Rodríguez",
+      "email": "carlos.rodriguez@example.com",
+      "phoneNumber": "3215667890",
+      "cedula": 1234567890
+    },
+    {
+      "id": "P002",
+      "name": "María González",
+      "email": "maria.gonzalez@example.com",
+      "phoneNumber": "3001234567",
+      "cedula": 9876543210
+    }
+  ]
+}
+```
+
+```json 401 Unauthorized
+{
+  "message": "Token no enviado o inválido"
+}
+```
+
+```json 500 Internal Server Error
+{
+  "message": "Error interno del servidor"
+}
+```

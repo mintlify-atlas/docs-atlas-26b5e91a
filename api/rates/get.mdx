@@ -1,0 +1,79 @@
+---
+title: 'Get Rate by ID'
+description: 'Retrieve a specific rate by its ID'
+---
+
+<Warning>
+  This endpoint is currently not implemented in the API. To retrieve rates, use the [List Rates](/api/rates/list) endpoint which returns all rates.
+</Warning>
+
+## Alternative: List Rates
+
+To get information about a specific rate, you can:
+
+1. Use the [List Rates](/api/rates/list) endpoint to retrieve all rates
+2. Filter the results on the client side by `id_rate`
+
+### Example
+
+```javascript JavaScript
+// Fetch all rates
+const response = await fetch('https://api.demet.com/rate/get');
+const data = await response.json();
+
+// Filter for specific rate ID
+const rateId = 3;
+const rate = data.result.find(r => r.id_rate === rateId);
+
+console.log(rate);
+```
+
+```python Python
+import requests
+
+# Fetch all rates
+response = requests.get('https://api.demet.com/rate/get')
+data = response.json()
+
+# Filter for specific rate ID
+rate_id = 3
+rate = next((r for r in data['result'] if r['id_rate'] == rate_id), None)
+
+print(rate)
+```
+
+## Rate Object
+
+When you retrieve a rate, it will contain:
+
+<ResponseField name="id_rate" type="number">
+  Unique identifier for the rate
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the rate
+</ResponseField>
+
+<ResponseField name="pax" type="number">
+  Maximum capacity (number of people)
+</ResponseField>
+
+<ResponseField name="value4" type="number">
+  Price for 4-hour rental period
+</ResponseField>
+
+<ResponseField name="value8" type="number">
+  Price for 8-hour rental period
+</ResponseField>
+
+<ResponseField name="value_extra" type="number">
+  Price per additional hour
+</ResponseField>
+
+<ResponseField name="isPartner" type="boolean">
+  Whether this rate is for partner accounts
+</ResponseField>
+
+<ResponseField name="id_space" type="number">
+  ID of the space this rate belongs to
+</ResponseField>

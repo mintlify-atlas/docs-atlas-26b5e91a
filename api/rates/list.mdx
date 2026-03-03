@@ -1,0 +1,116 @@
+---
+title: 'List Rates'
+api: 'GET /rate/get'
+description: 'Retrieve all registered rates'
+---
+
+This endpoint returns all rates registered in the system. No authentication is required.
+
+<Note>
+  This endpoint does not require authentication and can be accessed publicly.
+</Note>
+
+## Response
+
+<ResponseField name="result" type="array">
+  Array of rate objects
+  
+  <Expandable title="Rate Object Properties">
+    <ResponseField name="id_rate" type="number">
+      Unique identifier for the rate
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Name of the rate
+    </ResponseField>
+    
+    <ResponseField name="pax" type="number">
+      Maximum capacity (number of people)
+    </ResponseField>
+    
+    <ResponseField name="value4" type="number">
+      Price for 4-hour rental period
+    </ResponseField>
+    
+    <ResponseField name="value8" type="number">
+      Price for 8-hour rental period
+    </ResponseField>
+    
+    <ResponseField name="value_extra" type="number">
+      Price per additional hour
+    </ResponseField>
+    
+    <ResponseField name="isPartner" type="boolean">
+      Whether this rate is for partner accounts
+    </ResponseField>
+    
+    <ResponseField name="id_space" type="number">
+      ID of the space this rate belongs to
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X GET https://api.demet.com/rate/get
+```
+
+```javascript JavaScript
+fetch('https://api.demet.com/rate/get', {
+  method: 'GET'
+});
+```
+
+```python Python
+import requests
+
+response = requests.get('https://api.demet.com/rate/get')
+rates = response.json()
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 - Success
+{
+  "result": [
+    {
+      "id_rate": 3,
+      "name": "Tarifa Fines de Semana",
+      "pax": 80,
+      "value4": 250000,
+      "value8": 400000,
+      "value_extra": 60000,
+      "isPartner": false,
+      "id_space": 2
+    },
+    {
+      "id_rate": 5,
+      "name": "Tarifa Entre Semana",
+      "pax": 100,
+      "value4": 220000,
+      "value8": 360000,
+      "value_extra": 55000,
+      "isPartner": false,
+      "id_space": 2
+    }
+  ]
+}
+```
+
+```json 500 - Server Error
+{
+  "message": "Error interno del servidor"
+}
+```
+
+</ResponseExample>
+
+## Error Codes
+
+| Status Code | Description |
+|-------------|-------------|
+| 200 | Rates successfully retrieved |
+| 500 | Internal server error |

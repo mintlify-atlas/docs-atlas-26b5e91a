@@ -1,0 +1,205 @@
+---
+title: 'Create Reservation'
+api: 'POST /reserve/register'
+description: 'Register a new reservation in the system'
+---
+
+This endpoint allows you to register a new reservation in the system. The user must be authenticated, and the JWT token is automatically obtained from the `access_token` cookie.
+
+## Request
+
+<ParamField body="v_id_reservation" type="string" required>
+  Unique reservation identifier (max 10 characters)
+  
+  Example: `"RSV00123"`
+</ParamField>
+
+<ParamField body="v_name" type="string" required>
+  Customer name (minimum 1 character)
+  
+  Example: `"Juan Pérez"`
+</ParamField>
+
+<ParamField body="v_email" type="string" required>
+  Customer email address (must be valid email format)
+  
+  Example: `"juan@example.com"`
+</ParamField>
+
+<ParamField body="v_phone_number" type="string" required>
+  Customer phone number (7-13 characters)
+  
+  Example: `"3104567890"`
+</ParamField>
+
+<ParamField body="v_init_date" type="string" required>
+  Reservation start date and time (ISO 8601 format)
+  
+  Example: `"2025-06-10T10:00:00Z"`
+</ParamField>
+
+<ParamField body="v_end_date" type="string" required>
+  Reservation end date and time (ISO 8601 format, must be greater than v_init_date)
+  
+  Example: `"2025-06-10T15:00:00Z"`
+</ParamField>
+
+<ParamField body="v_pax" type="number" required>
+  Number of people (must be positive integer)
+  
+  Example: `20`
+</ParamField>
+
+<ParamField body="v_status" type="string" required>
+  Reservation status. Must be one of: `"EN PROGRESO"`, `"FINALIZADO"`
+  
+  Example: `"EN PROGRESO"`
+</ParamField>
+
+<ParamField body="v_extras" type="string" required>
+  JSON string containing selected extras. Must be sent as a string, not an object.
+  
+  Valid formats:
+  - `"[{}]"` (empty extras)
+  - `"[{\"id_extra\":1, \"quantity\":2, \"value_add\":5000}]"` (with extras)
+  
+  Example: `"[{\"id_extra\":1, \"quantity\":2, \"value_add\":5000}]"`
+</ParamField>
+
+<ParamField body="v_amount" type="number" required>
+  Base amount (must be non-negative)
+  
+  Example: `85000`
+</ParamField>
+
+<ParamField body="v_total_value" type="number" required>
+  Total value including extras (must be non-negative)
+  
+  Example: `90000`
+</ParamField>
+
+<ParamField body="v_fk_rate" type="number" required>
+  Rate ID associated with the reservation (must be positive integer)
+  
+  Example: `2`
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+<ResponseExample>
+```json Response
+{
+  "message": "Registro Exitoso"
+}
+```
+</ResponseExample>
+
+## Error Responses
+
+<ResponseField name="400" type="Bad Request">
+  Validation error in the sent data. Common issues:
+  - Invalid email format
+  - End date is not greater than start date
+  - Missing required fields
+  - Invalid data types or constraints
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Token not sent or invalid. Ensure you're authenticated and the `access_token` cookie is present.
+</ResponseField>
+
+<ResponseField name="409" type="Conflict">
+  The selected dates are occupied or not available. Try different dates.
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Internal server error. Contact support if this persists.
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.demet.com/reserve/register \
+  -H "Content-Type: application/json" \
+  -b "access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "v_id_reservation": "RSV00123",
+    "v_name": "Juan Pérez",
+    "v_email": "juan@example.com",
+    "v_phone_number": "3104567890",
+    "v_init_date": "2025-06-10T10:00:00Z",
+    "v_end_date": "2025-06-10T15:00:00Z",
+    "v_pax": 20,
+    "v_status": "EN PROGRESO",
+    "v_extras": "[{\\\"id_extra\\\":1, \\\"quantity\\\":2, \\\"value_add\\\":5000}]",
+    "v_amount": 85000,
+    "v_total_value": 90000,
+    "v_fk_rate": 2
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.demet.com/reserve/register', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include', // Include cookies
+  body: JSON.stringify({
+    v_id_reservation: 'RSV00123',
+    v_name: 'Juan Pérez',
+    v_email: 'juan@example.com',
+    v_phone_number: '3104567890',
+    v_init_date: '2025-06-10T10:00:00Z',
+    v_end_date: '2025-06-10T15:00:00Z',
+    v_pax: 20,
+    v_status: 'EN PROGRESO',
+    v_extras: '[{"id_extra":1, "quantity":2, "value_add":5000}]',
+    v_amount: 85000,
+    v_total_value: 90000,
+    v_fk_rate: 2
+  })
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+```python Python
+import requests
+
+url = "https://api.demet.com/reserve/register"
+cookies = {"access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}
+
+payload = {
+    "v_id_reservation": "RSV00123",
+    "v_name": "Juan Pérez",
+    "v_email": "juan@example.com",
+    "v_phone_number": "3104567890",
+    "v_init_date": "2025-06-10T10:00:00Z",
+    "v_end_date": "2025-06-10T15:00:00Z",
+    "v_pax": 20,
+    "v_status": "EN PROGRESO",
+    "v_extras": '[{"id_extra":1, "quantity":2, "value_add":5000}]',
+    "v_amount": 85000,
+    "v_total_value": 90000,
+    "v_fk_rate": 2
+}
+
+response = requests.post(url, json=payload, cookies=cookies)
+print(response.json())
+```
+</CodeGroup>
+
+## Notes
+
+- The `v_extras` field must be sent as a JSON string, not as a JSON object or array
+- The end date must be strictly greater than the start date
+- All numeric fields (v_pax, v_amount, v_total_value, v_fk_rate) must meet their respective constraints
+- The system validates date availability and will return a 409 error if dates are already occupied
+- The authenticated user's employee ID is automatically associated with the reservation

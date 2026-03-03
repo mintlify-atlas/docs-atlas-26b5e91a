@@ -1,0 +1,181 @@
+---
+title: Introduction
+description: Welcome to the DEMET Backend API - a comprehensive hotel reservation management system built with Node.js, Express, and PostgreSQL
+---
+
+## Welcome to DEMET Backend API
+
+DEMET Backend is a robust and scalable REST API designed for comprehensive hotel reservation management. Built with modern technologies and best practices, it provides a complete solution for managing reservations, spaces, partners, rates, extras, and detailed reporting.
+
+<Note>
+  DEMET Backend follows a modular architecture with strict separation of concerns, making it maintainable, secure, and production-ready.
+</Note>
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Authentication & authorization" icon="lock">
+    Secure JWT-based authentication with access and refresh tokens stored in HTTP-only cookies. Role-based access control for Administrators and Management Assistants.
+  </Card>
+  
+  <Card title="Reservation management" icon="calendar">
+    Complete CRUD operations for reservations with date validation, guest information tracking, and status management. Support for extras and custom pricing.
+  </Card>
+  
+  <Card title="Space management" icon="warehouse">
+    Manage hotel spaces with detailed information including capacity, pricing tiers (4-hour, 8-hour, extra time), descriptions, and image galleries.
+  </Card>
+  
+  <Card title="Rate management" icon="dollar-sign">
+    Flexible rate system supporting partner and non-partner pricing, time-based rates, and custom extra charges for additional hours.
+  </Card>
+  
+  <Card title="Partner management" icon="users">
+    Track and manage hotel partners with contact information, email, and phone numbers for preferential booking rates.
+  </Card>
+  
+  <Card title="Extras management" icon="plus-circle">
+    Add-on services and amenities that can be attached to reservations with quantity tracking and value calculation.
+  </Card>
+  
+  <Card title="Reports & exports" icon="file-excel">
+    Generate comprehensive Excel reports with ExcelJS. Export reservation data, occupancy reports, and financial summaries.
+  </Card>
+  
+  <Card title="Email notifications" icon="envelope">
+    Automated email notifications using Nodemailer for reservation confirmations, updates, and administrative alerts.
+  </Card>
+</CardGroup>
+
+## Technology stack
+
+DEMET Backend is built with industry-standard technologies to ensure performance, security, and scalability:
+
+- **Node.js** - JavaScript runtime environment for server-side execution
+- **Express.js** - Fast, minimalist web framework for building REST APIs
+- **PostgreSQL** - Advanced relational database with stored procedures for complex business logic
+- **JWT (jsonwebtoken)** - Secure token-based authentication with access and refresh token strategy
+- **Bcrypt** - Industry-standard password hashing with salt rounds
+- **Zod** - TypeScript-first schema validation for request data
+- **Cookie Parser** - Parse and manage HTTP-only cookies for secure token storage
+- **Nodemailer** - Email sending capabilities for notifications
+- **ExcelJS** - Generate and export Excel spreadsheets for reporting
+- **Swagger/Scalar** - Interactive API documentation and testing interface
+- **CORS** - Configured for secure cross-origin resource sharing
+
+## Architecture
+
+The API follows a clean, layered architecture:
+
+```
+source/
+├── controller/        # Request handlers and response logic
+├── routes/            # API endpoint definitions
+├── service/           # Business logic and database operations
+├── middleware/        # Authentication, authorization, and validation
+├── validator/         # Zod schemas for request validation
+├── lib/               # Database connection and utilities
+├── util/
+│   └── templates/     # Email and report templates
+└── server.js          # Application entry point
+```
+
+<CodeGroup>
+```javascript server.js:34-50
+//Routes para Empleados
+app.use('/intern', AuthRoutes);
+//Routes para Gestion Socios
+app.use('/partner/', partnerRoutes)
+//Routes para Gestion Espacios
+app.use('/space/', spaceRoutes)
+//Routes para Gestion Tarifas
+app.use('/rate/', rateRoutes)
+//Routes para Gestion Extras
+app.use('/extra/', extraRoutes)
+//Routes para Gestion Reservas
+app.use('/reserve/', reserveRoutes)
+//Route para Gestion Resquest
+app.use('/request/', requestRoutes)
+//Route para Gestion Reportes
+app.use('/report/', reportRoutes)
+//Route para Gestions Historial Reservas
+app.use('/log/reserve/', logReserveRoutes)
+```
+</CodeGroup>
+
+## Security features
+
+DEMET Backend implements multiple layers of security:
+
+<Steps>
+  <Step title="Password hashing">
+    All passwords are hashed using bcrypt with 8 salt rounds before storage
+  </Step>
+  
+  <Step title="JWT authentication">
+    Dual-token strategy with short-lived access tokens (1 hour) and long-lived refresh tokens (7 days)
+  </Step>
+  
+  <Step title="HTTP-only cookies">
+    Tokens are stored in HTTP-only, secure cookies to prevent XSS attacks
+  </Step>
+  
+  <Step title="Role-based access control">
+    Middleware verification ensures only authorized users can access protected endpoints
+  </Step>
+  
+  <Step title="Input validation">
+    All request data is validated using Zod schemas before processing
+  </Step>
+  
+  <Step title="CORS configuration">
+    Restricted origins and credentials support for secure cross-origin requests
+  </Step>
+</Steps>
+
+## API endpoints
+
+The API is organized into the following main resource groups:
+
+| Resource | Base Path | Description |
+|----------|-----------|-------------|
+| Authentication | `/intern` | Employee registration, login, logout, token refresh |
+| Partners | `/partner` | Partner management operations |
+| Spaces | `/space` | Hotel space management and availability |
+| Rates | `/rate` | Pricing and rate management |
+| Extras | `/extra` | Additional services and amenities |
+| Reservations | `/reserve` | Reservation CRUD operations |
+| Requests | `/request` | Internal request management |
+| Reports | `/report` | Data export and reporting |
+| Reservation Logs | `/log/reserve` | Historical reservation tracking |
+
+## Interactive documentation
+
+DEMET Backend includes built-in API documentation powered by Scalar:
+
+```bash
+http://localhost:3002/reference
+```
+
+The interactive documentation allows you to:
+- Explore all available endpoints
+- View request/response schemas
+- Test API calls directly from your browser
+- See authentication requirements
+- Copy code examples in multiple languages
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get your development environment set up and make your first API call in minutes
+  </Card>
+  
+  <Card title="Authentication" icon="key" href="/authentication">
+    Learn how the JWT authentication system works and how to secure your requests
+  </Card>
+  
+  <Card title="API reference" icon="book" href="/reference">
+    Explore the complete API reference with all endpoints and schemas
+  </Card>
+</CardGroup>

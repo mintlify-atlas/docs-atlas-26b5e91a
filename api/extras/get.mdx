@@ -1,0 +1,104 @@
+---
+title: 'Get Extra'
+api: 'GET /extra/get/:id'
+description: 'Get details of a specific extra item'
+---
+
+<Note>
+Based on the current API implementation, getting all extras is available via `GET /extra/get`. To get a specific extra, you would need to filter the results from the list endpoint by `id_extra`.
+</Note>
+
+## Getting a Specific Extra
+
+While the API currently implements a single `GET /extra/get` endpoint that returns all extras, you can retrieve a specific extra by:
+
+1. Calling the list endpoint (`GET /extra/get`)
+2. Filtering the results by the desired `id_extra`
+
+## Example Implementation
+
+<RequestExample>
+
+```javascript JavaScript
+// Get all extras and filter by ID
+const getExtraById = async (extraId) => {
+  const response = await fetch('https://api.example.com/extra/get', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include'
+  });
+  
+  const data = await response.json();
+  const extra = data.result.find(item => item.id_extra === extraId);
+  
+  return extra;
+};
+
+// Usage
+const extra = await getExtraById(3);
+```
+
+```python Python
+import requests
+
+def get_extra_by_id(extra_id):
+    url = 'https://api.example.com/extra/get'
+    cookies = {'access_token': 'YOUR_JWT_TOKEN'}
+    
+    response = requests.get(url, cookies=cookies)
+    data = response.json()
+    
+    # Filter by ID
+    extra = next(
+        (item for item in data['result'] if item['id_extra'] == extra_id),
+        None
+    )
+    
+    return extra
+
+# Usage
+extra = get_extra_by_id(3)
+```
+
+```bash cURL
+# Get all extras (then parse with jq or similar tool)
+curl -X GET https://api.example.com/extra/get \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN" \
+  | jq '.result[] | select(.id_extra == 3)'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Filtered Result
+{
+  "id_extra": 3,
+  "name": "Silla Plástica",
+  "value_add": 5000,
+  "quantity": 50
+}
+```
+
+</ResponseExample>
+
+## Response Fields
+
+<ResponseField name="id_extra" type="number">
+  Unique identifier for the extra
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the extra item
+</ResponseField>
+
+<ResponseField name="value_add" type="number">
+  Additional cost for the extra item
+</ResponseField>
+
+<ResponseField name="quantity" type="number">
+  Available quantity of the extra item
+</ResponseField>

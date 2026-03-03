@@ -1,0 +1,209 @@
+---
+title: 'List Reservations'
+api: 'GET /reserve/get'
+description: 'Get all registered reservations'
+---
+
+This endpoint returns the complete list of reservations registered in the system. It includes customer information, dates, pax, associated rate, values, and extras used in each reservation.
+
+The user must be authenticated, and the JWT token is automatically obtained from the `access_token` cookie.
+
+## Request
+
+This endpoint does not require any parameters. Simply make a GET request with valid authentication.
+
+## Response
+
+<ResponseField name="result" type="array">
+  Array of reservation objects
+  
+  <Expandable title="Reservation Object">
+    <ResponseField name="id_reservation" type="string">
+      Unique reservation identifier
+      
+      Example: `"RSV00123"`
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Customer name
+      
+      Example: `"Juan Pérez"`
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      Customer email address
+      
+      Example: `"juan.perez@example.com"`
+    </ResponseField>
+    
+    <ResponseField name="phone_number" type="string">
+      Customer phone number
+      
+      Example: `"3119876543"`
+    </ResponseField>
+    
+    <ResponseField name="init_date" type="string">
+      Reservation start date and time (ISO 8601 format)
+      
+      Example: `"2025-07-15T09:00:00Z"`
+    </ResponseField>
+    
+    <ResponseField name="end_date" type="string">
+      Reservation end date and time (ISO 8601 format)
+      
+      Example: `"2025-07-15T13:00:00Z"`
+    </ResponseField>
+    
+    <ResponseField name="pax" type="number">
+      Number of people
+      
+      Example: `30`
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Reservation status: `"EN PROGRESO"` or `"FINALIZADO"`
+      
+      Example: `"EN PROGRESO"`
+    </ResponseField>
+    
+    <ResponseField name="extras" type="array">
+      List of extras associated with the reservation
+      
+      <Expandable title="Extra Object">
+        <ResponseField name="id_extra" type="number">
+          Extra item ID
+          
+          Example: `1`
+        </ResponseField>
+        
+        <ResponseField name="quantity" type="number">
+          Quantity of the extra item
+          
+          Example: `2`
+        </ResponseField>
+        
+        <ResponseField name="value_add" type="number">
+          Additional value/cost of the extra
+          
+          Example: `3000`
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="amount" type="number">
+      Base amount
+      
+      Example: `95000`
+    </ResponseField>
+    
+    <ResponseField name="total_value" type="number">
+      Total value including extras
+      
+      Example: `120000`
+    </ResponseField>
+    
+    <ResponseField name="fk_rate" type="number">
+      Associated rate ID
+      
+      Example: `4`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseExample>
+```json Response
+{
+  "result": [
+    {
+      "id_reservation": "RSV00123",
+      "name": "Juan Pérez",
+      "email": "juan.perez@example.com",
+      "phone_number": "3119876543",
+      "init_date": "2025-07-15T09:00:00Z",
+      "end_date": "2025-07-15T13:00:00Z",
+      "pax": 30,
+      "status": "EN PROGRESO",
+      "extras": [
+        {
+          "id_extra": 1,
+          "quantity": 2,
+          "value_add": 3000
+        },
+        {
+          "id_extra": 3,
+          "quantity": 1,
+          "value_add": 5000
+        }
+      ],
+      "amount": 95000,
+      "total_value": 120000,
+      "fk_rate": 4
+    },
+    {
+      "id_reservation": "RSV00124",
+      "name": "María González",
+      "email": "maria@example.com",
+      "phone_number": "3201234567",
+      "init_date": "2025-07-20T14:00:00Z",
+      "end_date": "2025-07-20T18:00:00Z",
+      "pax": 15,
+      "status": "EN PROGRESO",
+      "extras": [],
+      "amount": 50000,
+      "total_value": 50000,
+      "fk_rate": 2
+    }
+  ]
+}
+```
+</ResponseExample>
+
+## Error Responses
+
+<ResponseField name="401" type="Unauthorized">
+  Token not sent or invalid. Ensure you're authenticated and the `access_token` cookie is present.
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Internal server error. Contact support if this persists.
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET https://api.demet.com/reserve/get \
+  -H "Content-Type: application/json" \
+  -b "access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.demet.com/reserve/get', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include' // Include cookies
+});
+
+const data = await response.json();
+console.log(data.result);
+```
+
+```python Python
+import requests
+
+url = "https://api.demet.com/reserve/get"
+cookies = {"access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}
+
+response = requests.get(url, cookies=cookies)
+print(response.json())
+```
+</CodeGroup>
+
+## Notes
+
+- The response returns an object with a `result` key containing the array of reservations
+- The `extras` field in the response is returned as a parsed JSON array (not a string like in create/update requests)
+- All date fields are returned in ISO 8601 format
+- Empty extras will be returned as an empty array `[]`

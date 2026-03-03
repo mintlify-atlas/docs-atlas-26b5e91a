@@ -1,0 +1,101 @@
+---
+title: 'Reservations API Overview'
+description: 'Manage reservations including creation, retrieval, updates, and deletion'
+---
+
+The Reservations API allows you to manage reservations in the DEMET system. This includes creating new reservations, retrieving existing ones, updating reservation details, and deleting reservations.
+
+## Authentication
+
+All reservations endpoints require authentication via JWT token stored in the `access_token` cookie. The token is automatically obtained when a user logs in and must be included in all requests.
+
+## Base URL
+
+```
+/reserve
+```
+
+## Available Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Create Reservation" icon="plus" href="/api/reservations/create">
+    Register a new reservation in the system
+  </Card>
+  <Card title="List Reservations" icon="list" href="/api/reservations/list">
+    Get all registered reservations
+  </Card>
+  <Card title="Update Reservation" icon="pen" href="/api/reservations/update">
+    Update an existing reservation
+  </Card>
+  <Card title="Delete Reservation" icon="trash" href="/api/reservations/delete">
+    Delete a reservation from the system
+  </Card>
+</CardGroup>
+
+## Reservation Status
+
+Reservations can have one of the following statuses:
+
+- `EN PROGRESO` - Reservation is in progress
+- `FINALIZADO` - Reservation is completed
+
+## v_extras Format
+
+The `v_extras` field is a critical part of the reservations API. It must be sent as a **JSON string** (not a JSON object) representing an array of extra items.
+
+### Valid Formats
+
+```json
+// Empty extras
+"[{}]"
+
+// Single extra
+"[{\"id_extra\":1, \"quantity\":2, \"value_add\":5000}]"
+
+// Multiple extras
+"[{\"id_extra\":1, \"quantity\":2, \"value_add\":5000}, {\"id_extra\":3, \"quantity\":1, \"value_add\":3000}]"
+```
+
+### Extra Object Structure
+
+<ParamField body="id_extra" type="number" required>
+  The ID of the extra item
+</ParamField>
+
+<ParamField body="quantity" type="number" required>
+  The quantity of the extra item
+</ParamField>
+
+<ParamField body="value_add" type="number" required>
+  The additional value/cost of the extra item
+</ParamField>
+
+## Common Response Codes
+
+<ResponseField name="200" type="Success">
+  Request completed successfully
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Validation error in the sent data
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Token not sent or invalid
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Reservation not found
+</ResponseField>
+
+<ResponseField name="409" type="Conflict">
+  Dates are occupied or not available
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Internal server error
+</ResponseField>
+
+## Date Validation
+
+All reservation endpoints enforce that the end date (`v_end_date`) must be greater than the start date (`v_init_date`). Requests that violate this rule will be rejected with a 400 error.

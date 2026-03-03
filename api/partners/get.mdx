@@ -1,0 +1,97 @@
+---
+title: 'Get Partner'
+description: 'Verify if a user is an active partner'
+---
+
+<Note>
+  This endpoint is used for partner verification and is separate from the list endpoint.
+</Note>
+
+## Overview
+
+The partner verification system in DEMET uses the `/partner/verify` endpoint to check if a specific partner ID corresponds to an active partner in the system.
+
+## Endpoint
+
+`POST /partner/verify`
+
+## Request Body
+
+<ParamField body="v_idPartner" type="string" required>
+  ID of the partner to verify
+  
+  Example: `"123456789"`
+</ParamField>
+
+## Response
+
+<ResponseField name="result" type="boolean">
+  Indicates whether the partner is active and valid
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Error message if partner is not found (only present in error responses)
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.example.com/partner/verify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "v_idPartner": "123456789"
+  }'
+```
+
+```javascript JavaScript
+fetch('https://api.example.com/partner/verify', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    v_idPartner: '123456789'
+  })
+})
+.then(response => response.json())
+.then(data => console.log(data));
+```
+
+```python Python
+import requests
+
+url = "https://api.example.com/partner/verify"
+data = {"v_idPartner": "123456789"}
+
+response = requests.post(url, json=data)
+print(response.json())
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 Partner Found
+{
+  "result": true
+}
+```
+
+```json 401 Partner Not Found
+{
+  "message": "Socio No Encontrado",
+  "result": false
+}
+```
+
+```json 500 Internal Server Error
+{
+  "message": "Error inesperado en el servidor"
+}
+```
+
+<Info>
+  This endpoint does not require authentication cookies, making it suitable for public partner verification.
+</Info>

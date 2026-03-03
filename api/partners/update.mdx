@@ -1,0 +1,140 @@
+---
+title: 'Update Partner'
+api: 'PUT /partner/update'
+description: 'Update an existing partner information in the DEMET system'
+---
+
+## Overview
+
+This endpoint allows you to update the information of an existing partner. The user must be authenticated with a valid JWT token in the `access_token` cookie. All partner fields must be provided in the request.
+
+## Request Body
+
+<ParamField body="id" type="string" required>
+  Unique identifier of the partner to update
+  
+  Example: `"P001"`
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  Updated full name of the partner
+  
+  Example: `"Carlos Rodríguez"`
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Updated email address (must be a valid email format)
+  
+  Example: `"carlos.rodriguez@example.com"`
+</ParamField>
+
+<ParamField body="phoneNumber" type="string" required>
+  Updated contact phone number
+  
+  Example: `"3215667890"`
+</ParamField>
+
+<ParamField body="cedula" type="number" required>
+  Updated identification number (must be a positive number)
+  
+  Example: `1234567890`
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message confirming partner update
+  
+  Example: `"Socio Actualizado Exitosamente"`
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X PUT https://api.example.com/partner/update \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN" \
+  -d '{
+    "id": "P001",
+    "name": "Carlos Rodríguez Updated",
+    "email": "carlos.rodriguez@example.com",
+    "phoneNumber": "3215667890",
+    "cedula": 1234567890
+  }'
+```
+
+```javascript JavaScript
+fetch('https://api.example.com/partner/update', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  credentials: 'include', // Include cookies
+  body: JSON.stringify({
+    id: 'P001',
+    name: 'Carlos Rodríguez Updated',
+    email: 'carlos.rodriguez@example.com',
+    phoneNumber: '3215667890',
+    cedula: 1234567890
+  })
+})
+.then(response => response.json())
+.then(data => console.log(data));
+```
+
+```python Python
+import requests
+
+url = "https://api.example.com/partner/update"
+cookies = {"access_token": "YOUR_JWT_TOKEN"}
+data = {
+    "id": "P001",
+    "name": "Carlos Rodríguez Updated",
+    "email": "carlos.rodriguez@example.com",
+    "phoneNumber": "3215667890",
+    "cedula": 1234567890
+}
+
+response = requests.put(url, json=data, cookies=cookies)
+print(response.json())
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 Success
+{
+  "message": "Socio Actualizado Exitosamente"
+}
+```
+
+```json 400 Bad Request
+{
+  "message": "Error de validación o datos duplicados"
+}
+```
+
+```json 401 Unauthorized
+{
+  "message": "Token no enviado o inválido"
+}
+```
+
+```json 404 Not Found
+{
+  "message": "Socio no encontrado"
+}
+```
+
+```json 500 Internal Server Error
+{
+  "message": "Error interno del servidor"
+}
+```
+
+<Warning>
+  All fields are required when updating a partner. Make sure to include all partner information in the request body.
+</Warning>

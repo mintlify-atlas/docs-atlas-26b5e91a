@@ -1,0 +1,68 @@
+---
+title: 'Spaces Overview'
+description: 'Manage event spaces in the DEMET system'
+---
+
+## Introduction
+
+The Spaces API allows you to manage event spaces (salones) in the DEMET system. You can create, retrieve, update, and delete spaces, as well as check their availability.
+
+## Available Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Create Space" icon="plus" href="/api/spaces/create">
+    Register a new event space
+  </Card>
+  <Card title="List Spaces" icon="list" href="/api/spaces/list">
+    Get all available spaces
+  </Card>
+  <Card title="Get Space" icon="eye" href="/api/spaces/get">
+    Retrieve a specific space by ID
+  </Card>
+  <Card title="Update Space" icon="pen" href="/api/spaces/update">
+    Update space information
+  </Card>
+  <Card title="Delete Space" icon="trash" href="/api/spaces/delete">
+    Remove a space from the system
+  </Card>
+</CardGroup>
+
+## Authentication
+
+Most space endpoints require authentication via JWT token stored in the `access_token` cookie. Only the list endpoint is publicly accessible.
+
+## Space Object
+
+A space object contains the following properties:
+
+<ResponseField name="id_rate" type="number">
+  Unique identifier for the space
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the space
+</ResponseField>
+
+<ResponseField name="descrip" type="string">
+  Description of the space including amenities
+</ResponseField>
+
+<ResponseField name="pax" type="number">
+  Maximum capacity (number of people)
+</ResponseField>
+
+<ResponseField name="value4" type="number">
+  Price for 4-hour rental
+</ResponseField>
+
+<ResponseField name="value8" type="number">
+  Price for 8-hour rental
+</ResponseField>
+
+<ResponseField name="value_extra" type="number">
+  Price for additional hours beyond 8
+</ResponseField>
+
+<ResponseField name="url_img" type="array">
+  Array of image URLs for the space
+</ResponseField>

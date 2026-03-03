@@ -1,0 +1,125 @@
+---
+title: 'Create Rate'
+api: 'POST /rate/register'
+description: 'Register a new rate for a space'
+---
+
+This endpoint allows you to register a new rate associated with a specific space. Authentication is required via JWT token in the `access_token` cookie.
+
+## Request Body
+
+<ParamField body="v_name" type="string" required>
+  Name of the rate (e.g., "Weekend Rate", "Weekday Rate")
+</ParamField>
+
+<ParamField body="v_pax" type="number" required>
+  Maximum capacity (number of people). Must be a positive integer.
+</ParamField>
+
+<ParamField body="v_value4" type="number" required>
+  Price for 4-hour rental period. Must be a positive number.
+</ParamField>
+
+<ParamField body="v_value8" type="number" required>
+  Price for 8-hour rental period. Must be a positive number.
+</ParamField>
+
+<ParamField body="v_value_extra" type="number" required>
+  Price per additional hour beyond the standard periods. Must be a positive number.
+</ParamField>
+
+<ParamField body="v_isPartner" type="boolean" required>
+  Whether this rate is for partner accounts
+</ParamField>
+
+<ParamField body="v_idSpace" type="number" required>
+  ID of the space this rate belongs to. Must be a positive integer.
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message confirming the rate was registered
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X POST https://api.demet.com/rate/register \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN" \
+  -d '{
+    "v_name": "Tarifa Fines de Semana",
+    "v_pax": 80,
+    "v_value4": 250000,
+    "v_value8": 400000,
+    "v_value_extra": 60000,
+    "v_isPartner": false,
+    "v_idSpace": 2
+  }'
+```
+
+```javascript JavaScript
+fetch('https://api.demet.com/rate/register', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include',
+  body: JSON.stringify({
+    v_name: 'Tarifa Fines de Semana',
+    v_pax: 80,
+    v_value4: 250000,
+    v_value8: 400000,
+    v_value_extra: 60000,
+    v_isPartner: false,
+    v_idSpace: 2
+  })
+});
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 - Success
+{
+  "message": "Registro Exitoso"
+}
+```
+
+```json 400 - Validation Error
+{
+  "message": "El nombre es obligatorio"
+}
+```
+
+```json 401 - Unauthorized
+{
+  "message": "Token no enviado o inválido"
+}
+```
+
+```json 404 - Space Not Found
+{
+  "message": "Espacio asociado no encontrado"
+}
+```
+
+```json 500 - Server Error
+{
+  "message": "Error interno del servidor"
+}
+```
+
+</ResponseExample>
+
+## Error Codes
+
+| Status Code | Description |
+|-------------|-------------|
+| 200 | Rate successfully registered |
+| 400 | Validation error in rate data |
+| 401 | Token not sent or invalid (missing or expired cookie) |
+| 404 | Associated space not found |
+| 500 | Internal server error |

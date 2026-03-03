@@ -1,0 +1,683 @@
+---
+title: 'Error Handling'
+description: 'HTTP status codes, error responses, and centralized error handling'
+icon: 'bug'
+---
+
+## Overview
+
+DEMET Backend API implements **centralized error handling** to provide consistent, informative error responses across all endpoints.
+
+<Info>
+All errors follow a standardized format and use appropriate HTTP status codes for easy debugging and client-side error handling.
+</Info>
+
+## Error Response Format
+
+All error responses follow this consistent structure:
+
+```json
+{
+  "message": "Error description",
+  "auth": false  // Only present in authentication errors
+}
+```
+
+<Note>
+Some endpoints may include additional fields like `role` or `error` depending on the context.
+</Note>
+
+## HTTP Status Codes
+
+The API uses standard HTTP status codes to indicate the type of error:
+
+| Status Code | Meaning | Use Cases |
+|-------------|---------|----------|
+| **200** | OK | Successful operation |
+| **201** | Created | Resource created successfully |
+| **400** | Bad Request | Validation errors, malformed data, business logic violations |
+| **401** | Unauthorized | Missing/invalid token, wrong credentials, insufficient permissions |
+| **404** | Not Found | Resource not found |
+| **409** | Conflict | Duplicate data, resource already exists |
+| **500** | Internal Server Error | Unexpected errors, database connection issues |
+| **503** | Service Unavailable | Database connection refused |
+
+## Error Types
+
+### 1. Authentication Errors (401)
+
+These errors occur when JWT token validation fails:
+
+<AccordionGroup>
+  <Accordion title="Token Not Sent">
+    Occurs when the request doesn't include an `access_token` cookie.
+    
+    ```javascript
+    const token = req.cookies.access_token;
+    if(!token) return res.status(401).send({
+        auth: false, 
+        message: 'Token No Enviado'
+    });
+    ```
+    *Source: `/middleware/verifyToken.js:5-7`*
+    
+    **Response:**
+    ```json
+    {
+      "auth": false,
+      "message": "Token No Enviado"
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Invalid or Expired Token">
+    Occurs when the JWT signature is invalid or the token has expired.
+    
+    ```javascript
+    jwt.verify(token, process.env.ACCESS_SECRET, async(err, decoded) => {
+        if(err) return res.status(401).send({
+            auth: false, 
+            message: 'Token Invalido o Expirado'
+        });
+        // ...
+    })
+    ```
+    *Source: `/middleware/verifyToken.js:9-11`*
+    
+    **Response:**
+    ```json
+    {
+      "auth": false,
+      "message": "Token Invalido o Expirado"
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Wrong Credentials">
+    Occurs during login when email or password is incorrect.
+    
+    ```javascript
+    // User not found
+    const employeeData = await findEmail(email)
+    if(!employeeData) return res.status(401).json({
+        message : "Usuario No Encontrado"
+    })
+    
+    // Wrong password
+    const match = await comparePassword(password, employeeData.password)
+    if(!match) return res.status(401).json({
+        message: "Contraseña Incorrecta"
+    })
+    ```
+    *Source: `/controller/auth.controller.js:77-83`*
+    
+    **Responses:**
+    ```json
+    {"message": "Usuario No Encontrado"}
+    ```
+    ```json
+    {"message": "Contraseña Incorrecta"}
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### 2. Authorization Errors (401)
+
+These errors occur when a user lacks the required role/permissions:
+
+```javascript
+if(decoded.role != "Administrador") {
+    return res.status(401).send({
+        auth: false, 
+        message: 'Usuario/Rol No Autorizado', 
+        role: decoded.role
+    });
+}
+```
+*Source: `/middleware/rolAccess.js:14-18`*
+
+**Response:**
+```json
+{
+  "auth": false,
+  "message": "Usuario/Rol No Autorizado",
+  "role": "Asistente de Gerencia"
+}
+```
+
+<Warning>
+This error occurs when a non-Admin user attempts to access an Admin-only endpoint.
+</Warning>
+
+### 3. Validation Errors (400)
+
+Zod validation errors occur when request data doesn't match the schema:
+
+```javascript
+export const validateSchema = (schema) => {
+    return (req, res, next) => {
+        try {
+            const match = schema.safeParse(req.body);
+            if(!match.success) return res.status(400).json(match.error.message);
+            next(); 
+        } catch (error) {
+            return res.status(500).json({error: error})
+        }
+    }
+}
+```
+*Source: `/middleware/validate.js:3-13`*
+
+<Accordion title="Example Validation Errors">
+**Invalid email format:**
+```json
+[
+  {
+    "code": "invalid_string",
+    "validation": "email",
+    "path": ["email"],
+    "message": "Email Invalido"
+  }
+]
+```
+
+**Password too short:**
+```json
+[
+  {
+    "code": "too_small",
+    "minimum": 6,
+    "path": ["password"],
+    "message": "La contraseña debe tener al menos 6 caracteres"
+  }
+]
+```
+
+**Invalid role:**
+```json
+[
+  {
+    "code": "invalid_enum_value",
+    "path": ["rol"],
+    "message": "Rol inválido. Debe ser 'Administrador' o 'Asistente de Gerencia'"
+  }
+]
+```
+
+**Date validation (custom rule):**
+```json
+[
+  {
+    "path": ["v_end_date"],
+    "message": "La fecha final debe ser mayor que la fecha de inicio"
+  }
+]
+```
+*Schema: `/validator/reserve.schema.js:23-29`*
+</Accordion>
+
+### 4. Database Errors
+
+The API uses a centralized `errorHandler` function to map database errors to HTTP responses:
+
+```javascript
+import { AppError } from "./AppError.js";
+
+// Map of PostgreSQL errors to HTTP responses
+const pgErrorMap = [
+    // Authentication / Identity
+    { text: 'EMAIL DESCONOCIDO', msg: 'EMAIL DESCONOCIDO', status: 404 },
+    { text: 'EMAIL EN USO', msg: 'EMAIL EN USO', status: 409 },
+
+    // Partners
+    { text: 'SOCIO NO ENCONTRADO', msg: 'Socio No Encontrado, Porfavor Verifique su Identificador', status: 404 },
+    { text: 'VERIFIQUE VALORES DE CEDULA', msg: 'Numero de Cedula Invalido', status: 400 },
+
+    // Validation
+    { text: 'NO SE PERMITE VALORES NEGATIVOS', msg: 'NO SE PERMITE VALORES NEGATIVOS', status: 400 },
+    { text: 'NO SE PERMITEN VALORES NEGATIVOS O NULOS', msg: 'NO SE PERMITEN VALORES NEGATIVOS O NULOS', status: 400 },
+
+    // Spaces
+    { text: 'ESPACIO OCUPADO EN ESE MOMENTO', msg: 'ESPACIO OCUPADO EN ESE MOMENTO', status: 409 },
+    { text: 'ESPACIO NO ENCONTRADO', msg: 'ESPACIO NO ENCONTRADO', status: 404 },
+
+    // Rates
+    { text: 'TARIFA NO ENCONTRADA', msg: 'TARIFA NO ENCONTRADA', status: 404 },
+
+    // Reservations
+    { text: 'CODIGO DE RESERVA EN USO', msg: 'CODIGO DE RESERVA EN USO', status: 409 },
+    { text: 'VALORES DUPLICADOS', msg: 'Cedula o Identificador en Uso', status: 409 },
+    { text: 'EL INICIO DE LA RESERVA NO PUEDE SER MAYOR A SU CULMINACION', msg: 'EL INICIO DE LA RESERVA NO PUEDE SER MAYOR A SU CULMINACION', status: 400 },
+    { text: 'AFORO MAXIMO SOBREPASADO', msg: 'AFORO MAXIMO SOBREPASADO', status: 400 },
+    { text: 'RESERVA NO ENCONTRADA', msg: 'RESERVA NO ENCONTRADA', status: 404 },
+    
+    // Requests
+    { text: 'REQUEST NO ENCONTRADA', msg: 'REQUEST NO ENCONTRADA', status: 404 }
+];
+
+export const errorHandler = (error) => {
+    // Native PostgreSQL errors
+    if (error.code === '23505') {
+        throw new AppError("Algun Atributo Unico en Uso", 400);
+    }
+    if (error.code === 'ECONNREFUSED') {
+        throw new AppError("No se pudo conectar con la base de datos", 503);
+    }
+    if (error.code === '22P02') {
+        throw new AppError("Formato de dato inválido", 400);
+    }
+
+    // Custom errors from stored procedures
+    const found = pgErrorMap.find(e => error.message.includes(e.text));
+    if (found) {
+        throw new AppError(found.msg, found.status);
+    }
+
+    // Unhandled error
+    throw new AppError(error.message, 500);
+};
+```
+*Source: `/util/errorHandler.js:1-67`*
+
+<Note>
+**Error Handler Flow:**
+1. Check for native PostgreSQL error codes
+2. Search for custom error text from stored procedures
+3. Throw a standardized `AppError` with appropriate status code
+4. If no match, default to 500 Internal Server Error
+</Note>
+
+### AppError Class
+
+Custom error class that extends the native `Error` class:
+
+```javascript
+export class AppError extends Error {
+    constructor(message, statusCode){
+        super(message);
+        this.statusCode = statusCode;
+        this.isOperational = true;
+    }
+}
+```
+*Source: `/util/AppError.js:2-12`*
+
+**Properties:**
+- `message` - Human-readable error description
+- `statusCode` - HTTP status code to return
+- `isOperational` - Flag indicating this is a known, handleable error (not a bug)
+
+### Common Database Error Scenarios
+
+<AccordionGroup>
+  <Accordion title="Unique Constraint Violation (409)">
+    Occurs when trying to create a resource with a duplicate unique field.
+    
+    **Native PostgreSQL error:**
+    ```javascript
+    if (error.code === '23505') {
+        throw new AppError("Algun Atributo Unico en Uso", 400);
+    }
+    ```
+    
+    **Custom stored procedure errors:**
+    - `"EMAIL EN USO"` - Duplicate email during employee registration
+    - `"CODIGO DE RESERVA EN USO"` - Duplicate reservation ID
+    - `"VALORES DUPLICADOS"` - Duplicate ID or cedula
+    
+    **Response:**
+    ```json
+    {"message": "CODIGO DE RESERVA EN USO"}
+    ```
+  </Accordion>
+  
+  <Accordion title="Resource Not Found (404)">
+    Occurs when querying or updating a non-existent resource.
+    
+    **Examples:**
+    - `"RESERVA NO ENCONTRADA"`
+    - `"SOCIO NO ENCONTRADO"`
+    - `"ESPACIO NO ENCONTRADO"`
+    - `"TARIFA NO ENCONTRADA"`
+    - `"EMAIL DESCONOCIDO"`
+    
+    **Response:**
+    ```json
+    {"message": "RESERVA NO ENCONTRADA"}
+    ```
+  </Accordion>
+  
+  <Accordion title="Business Logic Violations (400)">
+    Occurs when data violates business rules enforced by stored procedures.
+    
+    **Examples:**
+    - `"AFORO MAXIMO SOBREPASADO"` - Too many guests for space capacity
+    - `"EL INICIO DE LA RESERVA NO PUEDE SER MAYOR A SU CULMINACION"` - Invalid date range
+    - `"NO SE PERMITE VALORES NEGATIVOS"` - Negative numbers not allowed
+    - `"Formato de dato inválido"` - PostgreSQL type mismatch
+    
+    **Response:**
+    ```json
+    {"message": "AFORO MAXIMO SOBREPASADO"}
+    ```
+  </Accordion>
+  
+  <Accordion title="Database Connection Errors (503)">
+    Occurs when the API cannot connect to PostgreSQL.
+    
+    ```javascript
+    if (error.code === 'ECONNREFUSED') {
+        throw new AppError("No se pudo conectar con la base de datos", 503);
+    }
+    ```
+    
+    **Response:**
+    ```json
+    {"message": "No se pudo conectar con la base de datos"}
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Error Handling in Controllers
+
+Controllers catch errors from services and format them appropriately:
+
+```javascript
+export const reserveController = {
+    register : async(req, res) => {
+        try {
+            const { v_id_reservation, v_name, v_email, /* ... */ } = await req.body;
+            
+            await reserveRegister(
+                v_id_reservation, v_name, v_email, /* ... */
+            );
+            
+            return res.status(200).json({message:'Registro Exitoso'})
+        } catch (error) {
+            console.log(error)
+            // Extract status code from AppError, default to 500
+            const status = error.statusCode || 500;
+            return res.status(status).json({message: error.message})
+        }
+    },
+    // ...
+}
+```
+*Source: `/controller/reserve.controller.js:4-18`*
+
+<Info>
+**Pattern:**
+1. Try to execute service logic
+2. Catch any errors (from `errorHandler` or unexpected errors)
+3. Extract `statusCode` from `AppError` (default to 500 if undefined)
+4. Return error response with status code and message
+</Info>
+
+## Error Handling in Services
+
+Services call `errorHandler` when database operations fail:
+
+```javascript
+import pool from "../lib/db.js";
+import { errorHandler } from "../util/errorHandler.js";
+
+export const reserveRegister = async(
+    v_id_reservation, v_name, v_email, /* ... */
+) => {
+    try {
+        await pool.query(
+            'CALL p_insert_reservation($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13);',
+            [v_id_reservation, v_name, v_email, /* ... */]
+        )
+    } catch (error) {
+        errorHandler(error)  // Throws AppError with appropriate status
+    }
+}
+```
+*Source: `/service/reserve.service.js:5-42`*
+
+## Complete Error Flow
+
+Here's how errors propagate through the system:
+
+<Steps>
+  <Step title="Database raises error">
+    PostgreSQL stored procedure raises an exception:
+    ```sql
+    RAISE EXCEPTION 'CODIGO DE RESERVA EN USO';
+    ```
+  </Step>
+  
+  <Step title="Service catches and transforms error">
+    ```javascript
+    try {
+        await pool.query('CALL p_insert_reservation(...)');
+    } catch (error) {
+        errorHandler(error);  // Transforms to AppError
+    }
+    ```
+  </Step>
+  
+  <Step title="Error handler maps to HTTP status">
+    ```javascript
+    const found = pgErrorMap.find(e => error.message.includes('CODIGO DE RESERVA EN USO'));
+    throw new AppError('CODIGO DE RESERVA EN USO', 409);
+    ```
+  </Step>
+  
+  <Step title="Controller catches and formats response">
+    ```javascript
+    catch (error) {
+        const status = error.statusCode || 500;  // 409
+        return res.status(status).json({message: error.message})
+    }
+    ```
+  </Step>
+  
+  <Step title="Client receives error response">
+    ```json
+    HTTP/1.1 409 Conflict
+    Content-Type: application/json
+    
+    {
+      "message": "CODIGO DE RESERVA EN USO"
+    }
+    ```
+  </Step>
+</Steps>
+
+## Error Response Examples by Endpoint
+
+<CodeGroup>
+```json Login - Wrong Email
+POST /intern/login
+
+Response: 401 Unauthorized
+{
+  "message": "Usuario No Encontrado"
+}
+```
+
+```json Login - Wrong Password
+POST /intern/login
+
+Response: 401 Unauthorized
+{
+  "message": "Contraseña Incorrecta"
+}
+```
+
+```json Signup - Email in Use
+POST /intern/signup
+
+Response: 400 Bad Request
+{
+  "error": "Email en Uso"
+}
+```
+
+```json Reserve - Missing Token
+POST /reserve/register
+(no access_token cookie)
+
+Response: 401 Unauthorized
+{
+  "auth": false,
+  "message": "Token No Enviado"
+}
+```
+
+```json Reserve - Expired Token
+POST /reserve/register
+(expired access_token)
+
+Response: 401 Unauthorized
+{
+  "auth": false,
+  "message": "Token Invalido o Expirado"
+}
+```
+
+```json Reserve - Insufficient Permissions
+POST /reserve/register
+(non-Admin user)
+
+Response: 401 Unauthorized
+{
+  "auth": false,
+  "message": "Usuario/Rol No Autorizado",
+  "role": "Asistente de Gerencia"
+}
+```
+
+```json Reserve - Validation Error
+POST /reserve/register
+{"v_email": "invalid-email"}
+
+Response: 400 Bad Request
+[
+  {
+    "code": "invalid_string",
+    "validation": "email",
+    "path": ["v_email"],
+    "message": "El email no es válido"
+  }
+]
+```
+
+```json Reserve - Duplicate ID
+POST /reserve/register
+{"v_id_reservation": "RSV001"} // already exists
+
+Response: 409 Conflict
+{
+  "message": "CODIGO DE RESERVA EN USO"
+}
+```
+
+```json Reserve - Capacity Exceeded
+POST /reserve/register
+{"v_pax": 100} // exceeds space capacity
+
+Response: 400 Bad Request
+{
+  "message": "AFORO MAXIMO SOBREPASADO"
+}
+```
+
+```json Update - Not Found
+PUT /reserve/update
+{"v_id_reservation": "NONEXISTENT"}
+
+Response: 404 Not Found
+{
+  "message": "RESERVA NO ENCONTRADA"
+}
+```
+</CodeGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Appropriate Status Codes" icon="hashtag">
+    Always return the correct HTTP status code (400 for validation, 401 for auth, 404 for not found, etc.)
+  </Card>
+  
+  <Card title="Provide Clear Messages" icon="message">
+    Error messages should be descriptive and actionable for debugging.
+  </Card>
+  
+  <Card title="Centralize Error Handling" icon="bullseye">
+    Use `errorHandler` and `AppError` consistently across all services.
+  </Card>
+  
+  <Card title="Log Errors" icon="file-lines">
+    Use `console.log(error)` in controllers to track errors (consider structured logging in production).
+  </Card>
+</CardGroup>
+
+<Warning>
+**Never expose sensitive information in error messages!**
+- Don't include database connection strings
+- Don't reveal internal file paths
+- Don't show SQL queries or stack traces to clients
+</Warning>
+
+## Handling Errors on the Client
+
+<Accordion title="Example: React Error Handling">
+```javascript
+try {
+  const response = await fetch('https://api.example.com/reserve/register', {
+    method: 'POST',
+    credentials: 'include',  // Send cookies
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(reservationData)
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    
+    switch (response.status) {
+      case 400:
+        console.error('Validation error:', errorData.message);
+        break;
+      case 401:
+        console.error('Authentication error:', errorData.message);
+        // Redirect to login
+        break;
+      case 404:
+        console.error('Resource not found:', errorData.message);
+        break;
+      case 409:
+        console.error('Conflict:', errorData.message);
+        break;
+      case 500:
+        console.error('Server error:', errorData.message);
+        break;
+      default:
+        console.error('Unexpected error:', errorData.message);
+    }
+    
+    return;
+  }
+  
+  const data = await response.json();
+  console.log('Success:', data);
+} catch (error) {
+  console.error('Network error:', error);
+}
+```
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="diagram-project" href="/concepts/architecture">
+    Understand how controllers, services, and middleware work together.
+  </Card>
+  
+  <Card title="Security" icon="shield-halved" href="/concepts/security">
+    Learn about authentication and authorization errors in detail.
+  </Card>
+</CardGroup>

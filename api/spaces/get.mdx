@@ -1,0 +1,103 @@
+---
+title: 'Get Space'
+api: 'GET /space/get'
+description: 'Retrieve space information'
+---
+
+<Note>
+  The current implementation returns all spaces. To get a specific space, filter the results by `id_rate` on the client side, or use the list endpoint and find the desired space.
+</Note>
+
+## Authentication
+
+This endpoint does not require authentication and is publicly accessible.
+
+## Response
+
+<ResponseField name="result" type="array">
+  Array of all space objects. Filter by `id_rate` to get a specific space.
+  
+  <Expandable title="Space Object Properties">
+    <ResponseField name="id_rate" type="number">
+      Unique identifier for the space
+      
+      Example: `3`
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Name of the space
+      
+      Example: `"Salón Principal"`
+    </ResponseField>
+    
+    <ResponseField name="descrip" type="string">
+      Description of the space
+      
+      Example: `"Espacio amplio con sonido y sillas incluidas"`
+    </ResponseField>
+    
+    <ResponseField name="pax" type="number">
+      Maximum capacity (number of people)
+      
+      Example: `80`
+    </ResponseField>
+    
+    <ResponseField name="value4" type="number">
+      Price for 4-hour rental
+      
+      Example: `250000`
+    </ResponseField>
+    
+    <ResponseField name="value8" type="number">
+      Price for 8-hour rental
+      
+      Example: `400000`
+    </ResponseField>
+    
+    <ResponseField name="value_extra" type="number">
+      Price for additional hours
+      
+      Example: `60000`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X GET https://api.demet.com/space/get
+```
+
+## Example Response
+
+```json
+{
+  "result": [
+    {
+      "id_rate": 3,
+      "name": "Salón Principal",
+      "descrip": "Espacio amplio con sonido y sillas incluidas",
+      "pax": 80,
+      "value4": 250000,
+      "value8": 400000,
+      "value_extra": 60000
+    }
+  ]
+}
+```
+
+## Filtering by ID
+
+To get a specific space, filter the result array by `id_rate`:
+
+```javascript
+const response = await fetch('https://api.demet.com/space/get');
+const { result } = await response.json();
+const space = result.find(s => s.id_rate === 3);
+```
+
+## Error Responses
+
+<ResponseField name="500" type="error">
+  Internal server error.
+</ResponseField>

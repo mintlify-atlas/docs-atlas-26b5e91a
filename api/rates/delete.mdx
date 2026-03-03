@@ -1,0 +1,105 @@
+---
+title: 'Delete Rate'
+api: 'DELETE /rate/delete'
+description: 'Delete an existing rate'
+---
+
+This endpoint allows you to delete a previously registered rate from the system. Authentication is required via JWT token in the `access_token` cookie.
+
+<Warning>
+  Deleting a rate is a permanent action and cannot be undone. Make sure you want to delete the rate before proceeding.
+</Warning>
+
+## Request Body
+
+<ParamField body="v_id_rate" type="number" required>
+  ID of the rate to delete. Must be a positive integer.
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message confirming the rate was deleted
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X DELETE https://api.demet.com/rate/delete \
+  -H "Content-Type: application/json" \
+  -b "access_token=YOUR_JWT_TOKEN" \
+  -d '{
+    "v_id_rate": 5
+  }'
+```
+
+```javascript JavaScript
+fetch('https://api.demet.com/rate/delete', {
+  method: 'DELETE',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include',
+  body: JSON.stringify({
+    v_id_rate: 5
+  })
+});
+```
+
+```python Python
+import requests
+
+url = 'https://api.demet.com/rate/delete'
+data = {'v_id_rate': 5}
+
+response = requests.delete(
+    url,
+    json=data,
+    cookies={'access_token': 'YOUR_JWT_TOKEN'}
+)
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 - Success
+{
+  "message": "Eliminacion Exitosa"
+}
+```
+
+```json 400 - Invalid Data
+{
+  "message": "El ID de la tarifa es obligatorio"
+}
+```
+
+```json 401 - Unauthorized
+{
+  "message": "Token no enviado o inválido"
+}
+```
+
+```json 500 - Server Error
+{
+  "message": "Error interno del servidor"
+}
+```
+
+</ResponseExample>
+
+## Error Codes
+
+| Status Code | Description |
+|-------------|-------------|
+| 200 | Rate successfully deleted |
+| 400 | Invalid data or rate not found |
+| 401 | Token not sent or invalid (missing or expired cookie) |
+| 500 | Internal server error |
+
+## Related Endpoints
+
+- [Create Rate](/api/rates/create) - Register a new rate
+- [List Rates](/api/rates/list) - View all rates before deletion
+- [Update Rate](/api/rates/update) - Modify rate instead of deleting

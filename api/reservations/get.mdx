@@ -1,0 +1,50 @@
+---
+title: 'Get Reservation by ID'
+description: 'Get a specific reservation by its ID'
+---
+
+<Note>
+  **Endpoint Not Implemented**: The current API does not have a dedicated endpoint for retrieving a single reservation by ID. To get a specific reservation, use the [List Reservations](/api/reservations/list) endpoint (`GET /reserve/get`) and filter the results client-side.
+</Note>
+
+## Alternative Approach
+
+To retrieve a specific reservation:
+
+1. Call the `GET /reserve/get` endpoint to retrieve all reservations
+2. Filter the results by `id_reservation` on the client side
+
+### Example
+
+```javascript
+const response = await fetch('https://api.demet.com/reserve/get', {
+  method: 'GET',
+  credentials: 'include'
+});
+
+const data = await response.json();
+const specificReservation = data.result.find(
+  reservation => reservation.id_reservation === 'RSV00123'
+);
+
+console.log(specificReservation);
+```
+
+## Possible Future Endpoint
+
+If you need a dedicated endpoint for retrieving a single reservation, consider implementing:
+
+```
+GET /reserve/get/:id
+```
+
+This would allow you to retrieve a specific reservation directly:
+
+```bash
+curl -X GET https://api.demet.com/reserve/get/RSV00123 \
+  -b "access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+<Tip>
+  For now, use the [List Reservations](/api/reservations/list) endpoint and filter client-side for the best performance.
+</Tip>

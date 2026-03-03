@@ -1,0 +1,73 @@
+---
+title: 'Rates API Overview'
+description: 'Manage space rates and pricing for the DEMET platform'
+---
+
+The Rates API allows you to manage pricing information for different spaces in the DEMET platform. You can create, retrieve, update, and delete rate configurations.
+
+## Base URL
+
+```
+/rate
+```
+
+## Available Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Create Rate" icon="plus" href="/api/rates/create">
+    Register a new rate for a space
+  </Card>
+  <Card title="List Rates" icon="list" href="/api/rates/list">
+    Get all registered rates
+  </Card>
+  <Card title="Update Rate" icon="pen" href="/api/rates/update">
+    Update an existing rate
+  </Card>
+  <Card title="Delete Rate" icon="trash" href="/api/rates/delete">
+    Delete a rate from the system
+  </Card>
+</CardGroup>
+
+## Rate Object
+
+A rate object contains the following fields:
+
+<ResponseField name="id_rate" type="number">
+  Unique identifier for the rate
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the rate (e.g., "Weekend Rate", "Weekday Rate")
+</ResponseField>
+
+<ResponseField name="pax" type="number">
+  Maximum capacity (number of people)
+</ResponseField>
+
+<ResponseField name="value4" type="number">
+  Price for 4-hour rental period
+</ResponseField>
+
+<ResponseField name="value8" type="number">
+  Price for 8-hour rental period
+</ResponseField>
+
+<ResponseField name="value_extra" type="number">
+  Price per additional hour beyond the standard periods
+</ResponseField>
+
+<ResponseField name="isPartner" type="boolean">
+  Whether this rate is for partner accounts
+</ResponseField>
+
+<ResponseField name="id_space" type="number">
+  ID of the space this rate belongs to
+</ResponseField>
+
+## Authentication
+
+Most rate endpoints require authentication via JWT token stored in the `access_token` cookie. The token is automatically sent with requests when the user is logged in.
+
+<Note>
+  The List Rates endpoint (GET /rate/get) does not require authentication.
+</Note>

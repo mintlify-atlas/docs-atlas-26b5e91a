@@ -1,0 +1,48 @@
+---
+title: 'Extras Overview'
+description: 'Manage additional items and services available in the system'
+---
+
+The Extras API allows you to manage additional items and services that can be added to bookings, such as chairs, tables, tablecloths, and other equipment. These endpoints require authentication via cookie-based JWT tokens.
+
+## Available Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Create Extra" icon="plus" href="/api/extras/create">
+    Register a new extra item in the system
+  </Card>
+  <Card title="List Extras" icon="list" href="/api/extras/list">
+    Retrieve all available extras
+  </Card>
+  <Card title="Get Extra" icon="file" href="/api/extras/get">
+    Get details of a specific extra
+  </Card>
+  <Card title="Update Extra" icon="pen" href="/api/extras/update">
+    Update an existing extra item
+  </Card>
+  <Card title="Delete Extra" icon="trash" href="/api/extras/delete">
+    Remove an extra from the system
+  </Card>
+</CardGroup>
+
+## Authentication
+
+All extras endpoints require authentication using a JWT token stored in the `access_token` cookie. The user must have appropriate role permissions to access these endpoints.
+
+## Common Fields
+
+<ResponseField name="id_extra" type="number">
+  Unique identifier for the extra
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the extra item
+</ResponseField>
+
+<ResponseField name="value_add" type="number">
+  Additional cost for the extra item
+</ResponseField>
+
+<ResponseField name="quantity" type="number">
+  Available quantity of the extra item
+</ResponseField>

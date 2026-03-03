@@ -1,0 +1,152 @@
+---
+title: 'Delete Reservation'
+api: 'DELETE /reserve/delete'
+description: 'Delete an existing reservation from the system'
+---
+
+This endpoint allows you to delete an existing reservation from the system. Only the reservation ID is required.
+
+The user must be authenticated, and the JWT token is automatically obtained from the `access_token` cookie.
+
+<Warning>
+  Deleting a reservation is a permanent action and cannot be undone. Make sure you want to delete the reservation before calling this endpoint.
+</Warning>
+
+## Request
+
+<ParamField body="v_id_reservation" type="string" required>
+  The ID of the reservation to delete (1-10 characters)
+  
+  Example: `"RSV00123"`
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+<ResponseExample>
+```json Response
+{
+  "message": "Eliminacion Exitosa"
+}
+```
+</ResponseExample>
+
+## Error Responses
+
+<ResponseField name="400" type="Bad Request">
+  Error in the sent data or invalid format. Common issues:
+  - Missing `v_id_reservation` field
+  - ID exceeds 10 characters
+  - Empty or invalid ID
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Token not sent or invalid. Ensure you're authenticated and the `access_token` cookie is present.
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  No reservation exists with the provided ID.
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Internal server error. Contact support if this persists.
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE https://api.demet.com/reserve/delete \
+  -H "Content-Type: application/json" \
+  -b "access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "v_id_reservation": "RSV00123"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.demet.com/reserve/delete', {
+  method: 'DELETE',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include', // Include cookies
+  body: JSON.stringify({
+    v_id_reservation: 'RSV00123'
+  })
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+```python Python
+import requests
+
+url = "https://api.demet.com/reserve/delete"
+cookies = {"access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}
+
+payload = {
+    "v_id_reservation": "RSV00123"
+}
+
+response = requests.delete(url, json=payload, cookies=cookies)
+print(response.json())
+```
+</CodeGroup>
+
+## Notes
+
+- This is a permanent deletion - there is no "soft delete" or recovery mechanism
+- Only the reservation ID is required in the request body
+- The endpoint will return a 404 error if the reservation doesn't exist
+- Consider implementing a confirmation step in your application before calling this endpoint
+- You may want to retrieve the reservation details before deletion to show the user what they're about to delete
+
+## Best Practices
+
+1. **Verify Before Delete**: Retrieve the reservation details before deletion to confirm it's the correct one
+   ```javascript
+   // First, get the reservation
+   const getResponse = await fetch('https://api.demet.com/reserve/get', {
+     credentials: 'include'
+   });
+   const reservations = await getResponse.json();
+   const reservation = reservations.result.find(r => r.id_reservation === 'RSV00123');
+   
+   // Show user the details and confirm
+   if (confirm(`Delete reservation for ${reservation.name}?`)) {
+     // Then delete
+     const deleteResponse = await fetch('https://api.demet.com/reserve/delete', {
+       method: 'DELETE',
+       headers: { 'Content-Type': 'application/json' },
+       credentials: 'include',
+       body: JSON.stringify({ v_id_reservation: 'RSV00123' })
+     });
+   }
+   ```
+
+2. **Handle 404 Gracefully**: The reservation might have already been deleted
+   ```javascript
+   try {
+     const response = await fetch('https://api.demet.com/reserve/delete', {
+       method: 'DELETE',
+       headers: { 'Content-Type': 'application/json' },
+       credentials: 'include',
+       body: JSON.stringify({ v_id_reservation: 'RSV00123' })
+     });
+     
+     if (response.status === 404) {
+       console.log('Reservation was already deleted');
+     } else if (response.ok) {
+       console.log('Reservation deleted successfully');
+     }
+   } catch (error) {
+     console.error('Error deleting reservation:', error);
+   }
+   ```
+
+3. **Update UI Immediately**: Remove the reservation from your UI after successful deletion

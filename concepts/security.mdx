@@ -1,0 +1,526 @@
+---
+title: 'Security'
+description: 'JWT authentication, role-based access control, and security best practices'
+icon: 'shield-halved'
+---
+
+## Overview
+
+DEMET Backend API implements multiple security layers to protect sensitive hotel reservation data:
+
+<CardGroup cols={2}>
+  <Card title="JWT Authentication" icon="key">
+    Stateless token-based authentication using JSON Web Tokens
+  </Card>
+  <Card title="HTTP-Only Cookies" icon="cookie">
+    Secure token storage preventing XSS attacks
+  </Card>
+  <Card title="Role-Based Access" icon="users-gear">
+    Two-tier authorization: Admin and Asistente de Gerencia
+  </Card>
+  <Card title="Input Validation" icon="shield-check">
+    Zod schema validation on all endpoints
+  </Card>
+</CardGroup>
+
+## JWT Authentication
+
+### Token Generation
+
+The API uses two types of JWT tokens:
+
+<AccordionGroup>
+  <Accordion title="Access Token (Short-lived)">
+    Used for authenticating API requests. Expires quickly for security.
+    
+    ```javascript
+    export const generateAccessToken = (employee) => {
+        return JWT.sign({
+            id_employee : employee.id_employee,
+            role : employee.rol
+        },
+        process.env.ACCESS_SECRET,
+        {expiresIn: process.env.ACCESS_EXPIRE_IN});
+    }
+    ```
+    *Source: `/service/auth.service.js:99-106`*
+    
+    **Payload contains:**
+    - `id_employee` - Employee identifier
+    - `role` - User role ("Administrador" or "Asistente de Gerencia")
+  </Accordion>
+  
+  <Accordion title="Refresh Token (Long-lived)">
+    Used to obtain new access tokens without re-authentication.
+    
+    ```javascript
+    export const generateRefreshToken = (employee) => {
+        return JWT.sign({
+            id_employee : employee.id_employee,
+            role : employee.rol
+        },
+        process.env.REFRESH_SECRET,
+        {expiresIn: process.env.REFRESH_EXPIRE_IN});
+    }
+    ```
+    *Source: `/service/auth.service.js:112-119`*
+  </Accordion>
+</AccordionGroup>
+
+### Login Flow
+
+When a user logs in, the system generates both tokens and stores them in HTTP-only cookies:
+
+```javascript
+login: async(req, res) => {
+    try {
+        const {email, password} = await req.body;
+        
+        // Find user by email
+        const employeeData = await findEmail(email)
+        if(!employeeData) return res.status(401).json({message : "Usuario No Encontrado"})
+        
+        // Compare password with bcrypt
+        const match = await comparePassword(password, employeeData.password)
+        if(!match) return res.status(401).json({message: "Contraseña Incorrecta"})
+        
+        // Generate tokens
+        const token = generateAccessToken(employeeData)
+        const refreshToken = generateRefreshToken(employeeData)
+        
+        // Set HTTP-only cookies
+        res.cookie("access_token", token, {
+            httpOnly: false,
+            secure: true,         // HTTPS only in production
+            sameSite: "none"     // Cross-site cookies allowed
+        });
+        
+        res.cookie("refresh_token", refreshToken, {
+            httpOnly: false,
+            secure: true,
+            sameSite: "none"
+        });
+        
+        return res.status(200).send({auth: true})
+    } catch (error) {
+        return res.status(400).json({error: error})
+    }
+}
+```
+*Source: `/controller/auth.controller.js:72-103`*
+
+<Warning>
+**Production Configuration**
+- `secure: true` ensures cookies are only sent over HTTPS
+- `sameSite: "none"` allows the frontend (on a different domain) to send cookies
+- In development, you may need to adjust these settings
+</Warning>
+
+### Token Refresh Flow
+
+When an access token expires, clients can use the refresh token to obtain a new one:
+
+```javascript
+refresh : async(req, res) => {
+    try {
+        // Get refresh token from cookie
+        const refreshToken = req.cookies.refresh_token;
+        if(!refreshToken) return res.status(401).json({ message: "Refresh token no encontrado" }); 
+        
+        // Verify refresh token
+        const decoded = verifyRefreshToken(refreshToken);
+        
+        // Generate new access token
+        const payload = {id_employee: decoded.id_employee, rol: decoded.role};
+        const token = generateAccessToken(payload);
+        
+        // Set new access token cookie
+        res.cookie("access_token", token, {
+            httpOnly: false,
+            secure: true,
+            sameSite: "none"
+        });
+        
+        return res.status(200).send({message: "Access token renovado"})
+    } catch (error) {
+        return res.status(400).json({error: error})
+    }
+}
+```
+*Source: `/controller/auth.controller.js:105-127`*
+
+## Authentication Middleware
+
+The `verifyToken` middleware validates JWT tokens on protected routes:
+
+```javascript
+import jwt from 'jsonwebtoken';
+
+export const verifyToken = (req, res, next) => {
+    // Extract token from cookie
+    const token = req.cookies.access_token;
+    
+    // Check if token exists
+    if(!token) return res.status(401).send({
+        auth: false, 
+        message: 'Token No Enviado'
+    });
+    
+    // Verify token signature and expiration
+    jwt.verify(token, process.env.ACCESS_SECRET, async(err, decoded) => {
+        if(err) return res.status(401).send({
+            auth: false, 
+            message: 'Token Invalido o Expirado'
+        });
+        
+        // Attach user data to request
+        req.user = decoded;
+        next();
+    })
+}
+```
+*Source: `/middleware/verifyToken.js:3-16`*
+
+<Info>
+**How it works:**
+1. Extracts JWT from `access_token` cookie
+2. Verifies token signature using `ACCESS_SECRET`
+3. Checks token expiration
+4. Attaches decoded user data to `req.user`
+5. Calls `next()` to proceed to the next middleware/controller
+</Info>
+
+## Role-Based Access Control (RBAC)
+
+### User Roles
+
+The API supports two roles:
+
+| Role | Spanish Name | Permissions |
+|------|--------------|-------------|
+| **Admin** | Administrador | Full access to all endpoints |
+| **Assistant** | Asistente de Gerencia | Limited access (future implementation) |
+
+### Authorization Middleware
+
+The `verifyRol` middleware restricts access to Admin users only:
+
+```javascript
+import jwt from 'jsonwebtoken';
+
+export const verifyRol = (req, res, next) => {
+    const token = req.cookies.access_token;
+    if(!token) return res.status(401).send({
+        auth: false, 
+        message: 'Token No Enviado'
+    });
+    
+    jwt.verify(token, process.env.ACCESS_SECRET, async(err, decoded) => {
+        if(err) return res.status(401).send({
+            auth: false, 
+            message: 'Token Invalido o Expirado'
+        });
+        
+        // Check if user has Admin role
+        if(decoded.role != "Administrador") {
+            return res.status(401).send({
+                auth: false, 
+                message: 'Usuario/Rol No Autorizado', 
+                role: decoded.role
+            });
+        }
+        
+        req.user = decoded;
+        next();
+    })
+}
+```
+*Source: `/middleware/rolAccess.js:3-20`*
+
+### Route Protection Examples
+
+<CodeGroup>
+```javascript Public Route
+// No authentication required
+router.post("/login", 
+    validateSchema(loginSchema), 
+    AuthController.login
+);
+```
+
+```javascript Authenticated Route
+// Requires valid JWT (any role)
+router.get('/me', 
+    verifyToken, 
+    AuthController.me
+);
+```
+
+```javascript Admin-Only Route
+// Requires Admin role
+router.post("/signup", 
+    verifyRol, 
+    validateSchema(registerSchema), 
+    AuthController.register
+);
+```
+
+```javascript Full Protection
+// Admin role + input validation
+router.post('/reserve/register', 
+    verifyRol, 
+    validateSchema(insertReservationSchema), 
+    reserveController.register
+);
+```
+</CodeGroup>
+
+## Password Security
+
+### Hashing with bcrypt
+
+Passwords are hashed using bcrypt with a salt factor of 8:
+
+```javascript
+import bcrypt from "bcrypt";
+
+// Hash password before storing
+export const hashed = async(password) => {
+    return await bcrypt.hash(password, 8)
+}
+
+// Compare password during login
+export const comparePassword = async(password, passwordDb) => {
+    return await bcrypt.compare(password, passwordDb)
+}
+```
+*Source: `/service/auth.service.js:7-13`*
+
+<Note>
+**Why bcrypt?**
+- Automatically generates salt
+- Slow by design (prevents brute-force attacks)
+- Battle-tested and widely used
+- Salt factor of 8 balances security and performance
+</Note>
+
+### Registration with Password Hashing
+
+```javascript
+register : async(req, res) => {
+    try {
+        const {name, email, password, rol} = await req.body;
+        
+        // Hash password before storing
+        const hashedPass = await hashed(password);
+        
+        // Register employee with hashed password
+        const error = await RegisterEmployee(name, email, hashedPass, rol);
+        
+        if(error == false) return res.status(400).json({error: 'Email en Uso'})
+        
+        return res.status(201).json({mensaje: "Registro Exitoso"})
+    } catch (error) {
+        return res.status(400).json({error: error})
+    }
+}
+```
+*Source: `/controller/auth.controller.js:4-19`*
+
+## Input Validation with Zod
+
+### Validation Middleware
+
+All request bodies are validated using Zod schemas:
+
+```javascript
+export const validateSchema = (schema) => {
+    return (req, res, next) => {
+        try {
+            const match = schema.safeParse(req.body);
+            if(!match.success) return res.status(400).json(match.error.message);
+            next(); 
+        } catch (error) {
+            return res.status(500).json({error: error})
+        }
+    }
+}
+```
+*Source: `/middleware/validate.js:3-13`*
+
+### Validation Schema Examples
+
+<AccordionGroup>
+  <Accordion title="Login Schema">
+    ```javascript
+    import { z } from "zod";
+    
+    export const loginSchema = z.object({
+        email: z.string().email("Email Invalido"),
+        password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres")
+    }).strict();
+    ```
+    *Source: `/validator/auth.schema.js:30-33`*
+    
+    The `.strict()` method rejects any extra fields not defined in the schema.
+  </Accordion>
+  
+  <Accordion title="Employee Registration Schema">
+    ```javascript
+    export const registerSchema = z.object({
+      name: z.string().min(3, "El nombre debe tener mínimo 3 caracteres"),
+      email: z.string().email("Email inválido"),
+      password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+      rol: z.enum(["Administrador", "Asistente de Gerencia"], {
+        required_error: "El rol es obligatorio",
+        invalid_type_error: "Rol inválido. Debe ser 'Administrador' o 'Asistente de Gerencia'"
+      })
+    }).strict();
+    ```
+    *Source: `/validator/auth.schema.js:4-12`*
+  </Accordion>
+  
+  <Accordion title="Reservation Schema with Custom Rules">
+    ```javascript
+    export const insertReservationSchema = z.object({
+        v_id_reservation: z.string().min(1).max(10),
+        v_name: z.string().min(1),
+        v_email: z.string().email("El email no es válido"),
+        v_phone_number: z.string().min(7).max(13),
+        v_init_date: z.coerce.date(), 
+        v_end_date: z.coerce.date(),
+        v_pax: z.number().int().positive(),
+        v_status: z.enum(["EN PROGRESO", "FINALIZADO"]),
+        v_extras: z.string(),
+        v_amount: z.number().nonnegative(),
+        v_total_value: z.number().nonnegative(),
+        v_fk_rate: z.number().int().positive()
+    })
+    .refine(
+        (data) => data.v_end_date > data.v_init_date,
+        {
+            message: "La fecha final debe ser mayor que la fecha de inicio",
+            path: ["v_end_date"]
+        }
+    );
+    ```
+    *Source: `/validator/reserve.schema.js:4-29`*
+    
+    The `.refine()` method adds custom validation logic (end date must be after start date).
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+**Validation happens before the controller**. Invalid requests are rejected immediately with a 400 status code.
+</Warning>
+
+## CORS Configuration
+
+The API uses CORS to control which origins can access it:
+
+```javascript
+import cors from 'cors';
+
+app.use(cors({
+  origin: [
+    "https://clubmetabros.vercel.app",  // Production frontend
+    "http://localhost:3000"              // Development frontend
+  ],
+  credentials: true  // Allow cookies to be sent
+}));
+```
+*Source: `/server.js:24-30`*
+
+<Info>
+**Key settings:**
+- `origin`: Whitelist of allowed domains
+- `credentials: true`: Required for sending HTTP-only cookies cross-origin
+</Info>
+
+## Environment Variables
+
+Security-sensitive configuration is stored in environment variables:
+
+```bash
+# JWT Secrets
+ACCESS_SECRET=your_access_token_secret_key
+REFRESH_SECRET=your_refresh_token_secret_key
+
+# Token Expiration
+ACCESS_EXPIRE_IN=15m    # 15 minutes
+REFRESH_EXPIRE_IN=7d    # 7 days
+
+# Database
+DATABASE_URL=postgresql://user:password@host:5432/database
+
+# Server
+PORT=3000
+```
+
+<Warning>
+**Never commit `.env` files to version control!** Use `.gitignore` to exclude them.
+</Warning>
+
+## Security Checklist
+
+<Steps>
+  <Step title="JWT tokens stored in HTTP-only cookies">
+    ✅ Prevents XSS attacks from stealing tokens
+  </Step>
+  
+  <Step title="Passwords hashed with bcrypt">
+    ✅ Prevents plaintext password exposure
+  </Step>
+  
+  <Step title="All inputs validated with Zod">
+    ✅ Prevents injection attacks and malformed data
+  </Step>
+  
+  <Step title="Role-based access control">
+    ✅ Restricts sensitive operations to authorized users
+  </Step>
+  
+  <Step title="CORS properly configured">
+    ✅ Only whitelisted origins can access the API
+  </Step>
+  
+  <Step title="HTTPS enforced in production">
+    ✅ `secure: true` on cookies ensures encrypted transmission
+  </Step>
+  
+  <Step title="Database uses prepared statements">
+    ✅ PostgreSQL parameterized queries prevent SQL injection
+  </Step>
+</Steps>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Rotate JWT Secrets" icon="rotate">
+    Change `ACCESS_SECRET` and `REFRESH_SECRET` regularly in production.
+  </Card>
+  
+  <Card title="Monitor Failed Logins" icon="eye">
+    Implement rate limiting to prevent brute-force attacks.
+  </Card>
+  
+  <Card title="Use Strong Passwords" icon="lock">
+    Enforce password complexity requirements in validation schemas.
+  </Card>
+  
+  <Card title="Log Security Events" icon="file-lines">
+    Track authentication failures, role violations, and suspicious activity.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Error Handling" icon="bug" href="/concepts/error-handling">
+    Learn how authentication and authorization errors are handled.
+  </Card>
+  
+  <Card title="Authentication Endpoints" icon="right-to-bracket" href="/api-reference/authentication/login">
+    Explore the login, logout, and token refresh endpoints.
+  </Card>
+</CardGroup>

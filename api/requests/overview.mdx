@@ -1,0 +1,49 @@
+---
+title: 'Requests Overview'
+description: 'Manage client and partner event requests'
+---
+
+The Requests API allows you to manage event requests from clients and partners. These endpoints handle the complete lifecycle of a request, from creation to deletion.
+
+## Available Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Create Request" icon="plus" href="/api/requests/create">
+    Register a new event request from a client or partner
+  </Card>
+  
+  <Card title="List Requests" icon="list" href="/api/requests/list">
+    Get all requests with detailed information
+  </Card>
+  
+  <Card title="Update Request" icon="pen" href="/api/requests/update">
+    Update request status from Pending to In Progress
+  </Card>
+  
+  <Card title="Delete Request" icon="trash" href="/api/requests/delete">
+    Remove a request from the system
+  </Card>
+  
+  <Card title="Get Price Quote" icon="calculator" href="/api/requests/get">
+    Calculate estimated price for an event
+  </Card>
+</CardGroup>
+
+## Request Lifecycle
+
+1. **Created**: A client or partner submits a new request via POST /request/register
+2. **Pending**: The request is created with "PENDIENTE" status
+3. **In Progress**: Admin updates status to "EN PROGRESO" via PUT /request/update
+4. **Completed or Deleted**: Request is either fulfilled or deleted via DELETE /request/delete
+
+## Authentication
+
+Most endpoints require authentication via JWT token stored in cookies:
+- **Public**: POST /request/register, POST /request/price
+- **Authenticated**: GET /request/get, PUT /request/update, DELETE /request/delete
+
+## Email Notifications
+
+The API automatically sends email notifications:
+- **On creation**: Client receives confirmation, admin receives notification
+- **On status update**: Client receives progress notification
