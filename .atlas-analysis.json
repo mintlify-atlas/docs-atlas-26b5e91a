@@ -1,0 +1,195 @@
+{
+  "projectType": "api-service",
+  "projectName": "DEMET Backend API",
+  "projectDescription": "REST API for hotel reservation management with authentication, spaces, rates, and reporting",
+  "theme": "palm",
+  "primaryColor": "#2563eb",
+  "lightColor": "#3b82f6",
+  "darkColor": "#1e40af",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/architecture",
+              "concepts/security",
+              "concepts/error-handling"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/setup",
+              "guides/configuration",
+              "guides/database",
+              "guides/email-notifications",
+              "guides/reports"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": [
+              "api/auth/overview",
+              "api/auth/signup",
+              "api/auth/login",
+              "api/auth/logout",
+              "api/auth/refresh",
+              "api/auth/employees"
+            ]
+          },
+          {
+            "group": "Reservations",
+            "pages": [
+              "api/reservations/overview",
+              "api/reservations/create",
+              "api/reservations/list",
+              "api/reservations/get",
+              "api/reservations/update",
+              "api/reservations/delete"
+            ]
+          },
+          {
+            "group": "Spaces",
+            "pages": [
+              "api/spaces/overview",
+              "api/spaces/create",
+              "api/spaces/list",
+              "api/spaces/get",
+              "api/spaces/update",
+              "api/spaces/delete"
+            ]
+          },
+          {
+            "group": "Rates",
+            "pages": [
+              "api/rates/overview",
+              "api/rates/create",
+              "api/rates/list",
+              "api/rates/get",
+              "api/rates/update",
+              "api/rates/delete"
+            ]
+          },
+          {
+            "group": "Partners",
+            "pages": [
+              "api/partners/overview",
+              "api/partners/create",
+              "api/partners/list",
+              "api/partners/get",
+              "api/partners/update",
+              "api/partners/delete"
+            ]
+          },
+          {
+            "group": "Extras",
+            "pages": [
+              "api/extras/overview",
+              "api/extras/create",
+              "api/extras/list",
+              "api/extras/get",
+              "api/extras/update",
+              "api/extras/delete"
+            ]
+          },
+          {
+            "group": "Requests",
+            "pages": [
+              "api/requests/overview",
+              "api/requests/create",
+              "api/requests/list",
+              "api/requests/get",
+              "api/requests/update",
+              "api/requests/delete"
+            ]
+          },
+          {
+            "group": "Reports",
+            "pages": [
+              "api/reports/overview",
+              "api/reports/generate"
+            ]
+          },
+          {
+            "group": "Reserve Logs",
+            "pages": [
+              "api/logs/overview",
+              "api/logs/list"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "JWT authentication with access and refresh tokens",
+    "Hotel reservation management",
+    "Space and room administration",
+    "Dynamic rate and pricing system",
+    "Partner and client management",
+    "Extra services and amenities",
+    "Request tracking system",
+    "Excel report generation",
+    "Email notifications via Nodemailer",
+    "Zod schema validation",
+    "OpenAPI/Swagger documentation",
+    "PostgreSQL database integration"
+  ],
+  "publicApiSurface": [
+    "POST /intern/signup - Register employee",
+    "POST /intern/signin - Login employee",
+    "POST /intern/logout - Logout employee",
+    "POST /intern/token - Refresh access token",
+    "GET /intern/all - List employees",
+    "PUT /intern/update - Update employee",
+    "DELETE /intern/delete - Delete employee",
+    "POST /reserve/register - Create reservation",
+    "GET /reserve/all - List reservations",
+    "GET /reserve/get/:id - Get reservation",
+    "PUT /reserve/update - Update reservation",
+    "DELETE /reserve/delete - Delete reservation",
+    "POST /space/register - Create space",
+    "GET /space/all - List spaces",
+    "GET /space/get/:id - Get space",
+    "PUT /space/update - Update space",
+    "DELETE /space/delete - Delete space",
+    "POST /rate/register - Create rate",
+    "GET /rate/all - List rates",
+    "GET /rate/get/:id - Get rate",
+    "PUT /rate/update - Update rate",
+    "DELETE /rate/delete - Delete rate",
+    "POST /partner/register - Create partner",
+    "GET /partner/all - List partners",
+    "GET /partner/get/:id - Get partner",
+    "PUT /partner/update - Update partner",
+    "DELETE /partner/delete - Delete partner",
+    "POST /extra/register - Create extra",
+    "GET /extra/all - List extras",
+    "GET /extra/get/:id - Get extra",
+    "PUT /extra/update - Update extra",
+    "DELETE /extra/delete - Delete extra",
+    "POST /request/register - Create request",
+    "GET /request/all - List requests",
+    "GET /request/get/:id - Get request",
+    "PUT /request/update - Update request",
+    "DELETE /request/delete - Delete request",
+    "GET /report/download - Generate Excel report",
+    "GET /log/reserve/all - List reservation logs"
+  ]
+}
