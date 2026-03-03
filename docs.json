@@ -62,6 +62,7 @@
               "api/auth/login",
               "api/auth/logout",
               "api/auth/refresh",
+              "api/auth/me",
               "api/auth/employees"
             ]
           },
@@ -84,7 +85,8 @@
               "api/spaces/list",
               "api/spaces/get",
               "api/spaces/update",
-              "api/spaces/delete"
+              "api/spaces/delete",
+              "api/spaces/occupied"
             ]
           },
           {

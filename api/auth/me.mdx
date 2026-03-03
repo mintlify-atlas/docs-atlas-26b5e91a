@@ -1,0 +1,89 @@
+---
+title: 'Get Current User'
+api: 'GET /intern/me'
+description: 'Get the role of the authenticated employee'
+---
+
+Returns the role of the currently authenticated employee. This endpoint requires a valid `access_token` cookie and uses the `verifyToken` middleware to verify the user's identity.
+
+## Authentication
+
+This endpoint requires JWT authentication via the `access_token` cookie.
+
+## Response
+
+<ResponseField name="role" type="string">
+  The role of the authenticated employee
+  
+  Possible values: `"Administrador"` or `"Asistente de Gerencia"`
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.example.com/intern/me \
+  -b "access_token=your_access_token_here"
+```
+
+```javascript JavaScript
+fetch('https://api.example.com/intern/me', {
+  method: 'GET',
+  credentials: 'include' // Include cookies
+})
+.then(response => response.json())
+.then(data => console.log(data));
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.example.com/intern/me',
+    cookies={'access_token': 'your_access_token_here'}
+)
+
+data = response.json()
+print(data)
+```
+
+</CodeGroup>
+
+## Example Responses
+
+```json 201 Success
+{
+  "role": "Administrador"
+}
+```
+
+```json 401 Token Not Sent
+{
+  "auth": false,
+  "message": "Token No Enviado"
+}
+```
+
+```json 401 Invalid Token
+{
+  "auth": false,
+  "message": "Token Invalido o Expirado"
+}
+```
+
+```json 400 Server Error
+{
+  "error": "Internal Server Error"
+}
+```
+
+## Use Cases
+
+- Verify user permissions before displaying admin UI
+- Check if current user can perform privileged operations
+- Display role-specific navigation or features
+
+<Note>
+  This endpoint only verifies the token and returns the role. It does not check for specific role permissions like the signup endpoint does with `verifyRol` middleware.
+</Note>
